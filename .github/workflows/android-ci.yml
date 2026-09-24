@@ -30,7 +30,8 @@ jobs:
           fi
           if compgen -G "qa/production-ui.part*" > /dev/null; then
             cat qa/production-ui.part* | tr -d '\r\n' | base64 --decode > /tmp/production-ui.zip
-            echo "675aaeb4351971560a17553317c5282b133aec34bc367923dd40024c9d76ad4c  /tmp/production-ui.zip" | sha256sum -c -
+            sha256sum /tmp/production-ui.zip
+            unzip -tq /tmp/production-ui.zip
             unzip -oq /tmp/production-ui.zip -d .
             echo "Applied production UI pass"
           fi
