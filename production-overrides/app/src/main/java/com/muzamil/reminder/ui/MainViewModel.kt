@@ -114,6 +114,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteGoal(item: GoalEntity) = viewModelScope.launch { repository.deleteGoal(item) }
     fun addTrip(item: TripEntity) = viewModelScope.launch { repository.addTrip(item) }
     fun deleteTrip(item: TripEntity) = viewModelScope.launch { repository.deleteTrip(item) }
+    fun addTripPlace(item: TripPlaceEntity) = viewModelScope.launch { repository.addTripPlace(item) }
+    fun deleteTripPlace(item: TripPlaceEntity) = viewModelScope.launch { repository.deleteTripPlace(item) }
     fun addProfile(item: ProfileEntity) = viewModelScope.launch { repository.addProfile(item) }
     fun deleteProfile(item: ProfileEntity) = viewModelScope.launch { if (item.type != "ME") repository.deleteProfile(item) }
     fun addCustomSound(item: CustomSoundEntity) = viewModelScope.launch { repository.addCustomSound(item) }
