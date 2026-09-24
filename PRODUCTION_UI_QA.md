@@ -20,3 +20,5 @@ Figma fidelity note:
 The supplied Figma Community file exposes four direct 375x812 reference app screens. Those screens define the visual target and design language. Other app screens extend the same tokens, spacing, card language, colors and navigation patterns rather than claiming pixel-identical source frames that do not exist in the provided Figma file.
 
 Build verification is performed by Android CI: unit tests, debug APK and release APK compilation.
+
+- Archive integrity repair validated by full ZIP CRC before Android compilation.
