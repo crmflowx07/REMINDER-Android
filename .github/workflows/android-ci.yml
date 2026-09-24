@@ -42,13 +42,15 @@ jobs:
       - name: Unit tests
         run: gradle --no-daemon testDebugUnitTest
 
-      - name: Build debug APK
-        run: gradle --no-daemon assembleDebug
+      - name: Build debug and unsigned release APKs
+        run: gradle --no-daemon assembleDebug assembleRelease
 
-      - name: Upload debug APK
+      - name: Upload QA APKs
         uses: actions/upload-artifact@v4
         with:
-          name: REMINDER-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: REMINDER-QA-APKs
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 14
