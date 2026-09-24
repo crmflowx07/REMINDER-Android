@@ -20,6 +20,7 @@ jobs:
           cp "$BT/apksigner" signing-tools/
           cp "$BT/zipalign" signing-tools/
           cp -R "$BT/lib" signing-tools/
+          if [ -d "$BT/lib64" ]; then cp -R "$BT/lib64" signing-tools/; fi
       - name: Upload signing tools
         uses: actions/upload-artifact@v4
         with:
