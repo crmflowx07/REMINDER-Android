@@ -1,78 +1,55 @@
-# REMINDER — Android App
+# REMINDER — Android
 
-REMINDER is an offline-first Android reminder and personal planning app built around one product rule: **simple on the surface, powerful under the hood**.
+**REMINDER** is an offline-first Android reminder and personal planning app.
 
-## What is implemented
+## Build status
 
-- Kotlin + Jetpack Compose + Material 3
-- MVVM-style UI state + Repository + Room database
-- Offline reminder CRUD
-- One-time, daily, weekdays, weekends, weekly, monthly, yearly, specific-days and custom interval recurrence
-- Custom recurrence units: minutes, hours, days, weeks and months
-- Multiple advance alerts plus the at-time alert
-- AlarmManager scheduling with exact-alarm capability check and fallback
-- Notification actions: configurable Snooze, Complete and Stop
-- Reboot / clock / timezone rescheduling receiver
-- Overdue reminders and completed history
-- Built-in original reminder sounds (10 WAV resources)
-- Per-reminder sound selection and vibration
-- Android system picker for custom sounds; persistent URI permission
-- Quick natural-language parsing for common offline phrases
-- Home, Planner, Calendar, Search, Routines, Categories
-- Meeting fields (location, meeting link, person/company, optional end time)
-- Ideas, Plans, Goals and Travel/Places
-- Optional family profiles (Me/spouse/child/parent/pet/other)
-- Optional one-tap demo seed using the supplied sample reminders/routines/travel data
-- Light, Dark and System themes
-- Local JSON export/import
-- Notification / exact-alarm / battery settings shortcuts
-- Three-screen onboarding and notification permission request
-- Accessibility-friendly Material components and readable tap targets
+The repository contains a reproducible Android source archive and GitHub Actions workflows.
 
-## Important scope note
-
-The supplied product specification explicitly defines V1 as stability-first. This project implements the V1 core plus several local expansion modules already requested in the specification, including Family Profiles, Ideas, Plans, Goals and Travel. Widgets, cloud backup, cross-device sync, OCR/document scanning, advanced AI suggestions, Business/Employee Mode, billing enforcement, advanced analytics and location-aware reminders remain roadmap items so the offline reminder core stays reliable.
-
-## Toolchain
-
-- Android SDK: API 36
+- CI reconstructs the full Android Studio project, verifies the archive checksum, installs Android SDK 36, runs unit tests, and builds an installable debug APK.
+- The release workflow builds a **signed release APK** after secure repository signing secrets are configured.
+- Package: `com.muzamil.reminder`
+- Version: `1.0.0` (versionCode 1)
 - minSdk: 26
-- targetSdk: 36
+- targetSdk / compileSdk: 36
 - JDK: 17
-- Android Gradle Plugin: 8.11.1
 - Gradle: 8.13
-- Kotlin: 1.9.24
+- Android Gradle Plugin: 8.11.1
 
-## Open in Android Studio
+## Source archive
 
-1. Install a current Android Studio version with Android SDK 36 and JDK 17.
-2. Open this folder as an Android project.
-3. If a Gradle wrapper JAR is not present, create it once using an installed Gradle:
+`source/reminder-source.zip.b64` is the Base64-encoded Android Studio source archive.
 
-   `gradle wrapper --gradle-version 8.13`
+SHA-256 of decoded ZIP:
 
-4. Sync Gradle.
-5. Run the `app` configuration on Android 8.0 (API 26) or newer.
+`fa7fe1436e2a86bf9cdef7e7ff5faf5e698830e43fa8e8fa4124e14b2af179aa`
 
-## Build
+Restore locally:
 
-Debug APK:
+```bash
+base64 --decode source/reminder-source.zip.b64 > reminder-source.zip
+unzip reminder-source.zip
+```
 
-`./gradlew assembleDebug`
+## Features
 
-Release AAB:
+Kotlin, Jetpack Compose, Material 3, Room, offline reminder CRUD, recurring reminders, multiple advance alerts, actionable notifications, snooze/complete/stop, AlarmManager scheduling, reboot/timezone rescheduling, 10 built-in WAV sounds, custom sound picker, routines, planner/calendar, search, overdue/completed history, categories, meetings, ideas, plans, goals, travel, optional family profiles, JSON export/import, onboarding, dark mode, and settings.
 
-`./gradlew bundleRelease`
+## Signed Uptodown build
 
-Before Play release, configure your own signing key in Android Studio / secure CI. Do not commit passwords or keystore secrets to source control.
+Never commit the private signing key to this public repository. Add these GitHub Actions repository secrets:
 
-## Reliability notes
+- `RELEASE_KEYSTORE_BASE64`
+- `RELEASE_STORE_PASSWORD`
+- `RELEASE_KEY_ALIAS`
+- `RELEASE_KEY_PASSWORD`
 
-- Android 13+ notification permission is requested after onboarding.
-- Exact alarm access is user-controlled. If it is unavailable, REMINDER uses an allowed inexact fallback instead of silently failing.
-- Pending alerts are rescheduled after reboot, timezone changes, manual clock changes, and app replacement.
-- Core reminder data is local Room data. Android cloud backup is disabled in this V1 build; users can export/import a local JSON backup.
+Then run **Actions → Signed Release APK → Run workflow**. The output artifact is:
 
-## UI reference
+`REMINDER-1.0.0-release.apk`
 
-The user requested an exact UI match, but no UI reference URL was present in the supplied message/file. The current Compose theme is a clean premium Material 3 implementation and is structured so the visual layer can be swapped without changing reminder/storage/scheduling behavior.
+For a tagged public release, create/push tag `v1.0.0`; the workflow attaches the signed APK to the GitHub Release.
+
+## Uptodown
+
+Uptodown accepts a local supported app file or a direct URL to the APK. Submit the final **signed release APK**, not the source archive.
