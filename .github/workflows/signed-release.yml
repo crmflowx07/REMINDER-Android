@@ -35,7 +35,7 @@ jobs:
         run: |
           base64 --decode source/reminder-source.zip.b64 > /tmp/reminder-source.zip
           echo "8f9625a909cf964e1161e612aba93fb0385b92c3bd06bf1c37b28622df6839f6  /tmp/reminder-source.zip" | sha256sum -c -
-          unzip -oq /tmp/reminder-source.zip -d .
+          unzip -oq /tmp/reminder-source.zip -d .\n          if [ -d overrides ]; then\n            cp -a overrides/. .\n          fi\n          echo "Applied Figma UI overrides"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
