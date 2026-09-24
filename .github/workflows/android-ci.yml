@@ -19,7 +19,7 @@ jobs:
         shell: bash
         run: |
           base64 --decode source/reminder-source.zip.b64 > /tmp/reminder-source.zip
-          echo "fa7fe1436e2a86bf9cdef7e7ff5faf5e698830e43fa8e8fa4124e14b2af179aa  /tmp/reminder-source.zip" | sha256sum -c -
+          echo "8f9625a909cf964e1161e612aba93fb0385b92c3bd06bf1c37b28622df6839f6  /tmp/reminder-source.zip" | sha256sum -c -
           unzip -oq /tmp/reminder-source.zip -d .
 
       - name: Set up JDK 17

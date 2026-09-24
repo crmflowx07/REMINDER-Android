@@ -22,7 +22,7 @@ The repository contains a reproducible Android source archive and GitHub Actions
 
 SHA-256 of decoded ZIP:
 
-`fa7fe1436e2a86bf9cdef7e7ff5faf5e698830e43fa8e8fa4124e14b2af179aa`
+`8f9625a909cf964e1161e612aba93fb0385b92c3bd06bf1c37b28622df6839f6`
 
 Restore locally:
 
