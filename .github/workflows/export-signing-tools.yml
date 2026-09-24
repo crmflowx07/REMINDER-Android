@@ -1,0 +1,35 @@
+name: Export Android Signing Tools
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  export-tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Install Android Build Tools 36
+        shell: bash
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;36.0.0"
+
+      - name: Pack signing tools
+        shell: bash
+        run: |
+          mkdir -p /tmp/android-signing-tools
+          cp -a "$ANDROID_HOME/build-tools/36.0.0/apksigner" /tmp/android-signing-tools/
+          cp -a "$ANDROID_HOME/build-tools/36.0.0/zipalign" /tmp/android-signing-tools/
+          cp -a "$ANDROID_HOME/build-tools/36.0.0/lib" /tmp/android-signing-tools/
+          if [ -d "$ANDROID_HOME/build-tools/36.0.0/lib64" ]; then
+            cp -a "$ANDROID_HOME/build-tools/36.0.0/lib64" /tmp/android-signing-tools/
+          fi
+
+      - name: Upload tools
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-signing-tools-36
+          path: /tmp/android-signing-tools
+          if-no-files-found: error
