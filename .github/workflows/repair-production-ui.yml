@@ -1,0 +1,80 @@
+name: Repair Production UI Archive
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Repair one-character Base64 corruption
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, io, subprocess, zipfile, sys
+
+          qa = Path("qa")
+          parts = {}
+          for i in range(9):
+              p = qa / f"production-ui.part{i:02d}"
+              parts[i] = p.read_text().replace("\r","").replace("\n","")
+
+          # Original commit contained the anomalous 10,001-char part06.
+          original = subprocess.check_output(
+              ["git","show","115de5ae15248bd2d28dcfef490ec3aab98fb306:qa/production-ui.part06"],
+              text=True
+          ).replace("\r","").replace("\n","")
+
+          if len(original) != 10001:
+              raise SystemExit(f"Unexpected original part06 length: {len(original)}")
+
+          found = None
+          for i in range(len(original)):
+              candidate = original[:i] + original[i+1:]
+              all_parts = [parts[j] for j in range(9)]
+              all_parts[6] = candidate
+              joined = "".join(all_parts)
+              try:
+                  raw = base64.b64decode(joined, validate=True)
+                  with zipfile.ZipFile(io.BytesIO(raw)) as z:
+                      bad = z.testzip()
+                      if bad is None:
+                          found = (i, original[i], candidate, raw)
+                          break
+              except Exception:
+                  pass
+
+          if found is None:
+              raise SystemExit("No valid single-character deletion repair found")
+
+          i, removed, candidate, raw = found
+          print(f"Repair found: delete index {i}, char={removed!r}")
+          (qa / "production-ui.part06").write_text(candidate)
+          Path("/tmp/production-ui-fixed.zip").write_bytes(raw)
+
+          with zipfile.ZipFile(io.BytesIO(raw)) as z:
+              print(f"ZIP entries: {len(z.namelist())}")
+              print("CRC: PASS")
+          PY
+
+          if git diff --quiet -- qa/production-ui.part06; then
+            echo "Archive already repaired."
+            exit 0
+          fi
+
+          git config user.name "REMINDER CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add qa/production-ui.part06
+          git commit -m "Repair production UI archive CRC"
+          git push
