@@ -35,6 +35,10 @@ jobs:
             unzip -oq /tmp/production-ui.zip -d .
             echo "Applied production UI pass"
           fi
+          if [ -d production-overrides ]; then
+            cp -a production-overrides/. .
+            echo "Applied materialized production overrides"
+          fi
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
