@@ -256,7 +256,7 @@ fun AddEditReminderScreen(vm: MainViewModel, reminderId: Long, onDone: () -> Uni
                 title = if (advanced) "Hide advanced options" else "More reminder options",
                 subtitle = if (advanced) "Repeat, alerts, category, profile, sound and priority are visible." else "Repeat, multiple alerts, category, profile, sound, meeting details and priority.",
                 icon = if (advanced) Icons.Rounded.ExpandLess else Icons.Rounded.Tune,
-                tint = MaterialTheme.colorScheme.primarySoft,
+                tint = MaterialTheme.colorScheme.primaryContainer,
                 onClick = { advanced = !advanced }
             ) {
                 Icon(if (advanced) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
