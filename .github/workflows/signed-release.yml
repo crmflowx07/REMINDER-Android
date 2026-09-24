@@ -43,7 +43,12 @@ jobs:
             unzip -oq qa/REMINDER_UI_QA_OVERRIDES.zip -d .
             echo "Applied full UI QA overrides"
           fi
-          echo "Applied Figma UI overrides"
+          if compgen -G "qa/production-ui.part*" > /dev/null; then
+            cat qa/production-ui.part* | tr -d '\r\n' | base64 --decode > /tmp/production-ui.zip
+            echo "675aaeb4351971560a17553317c5282b133aec34bc367923dd40024c9d76ad4c  /tmp/production-ui.zip" | sha256sum -c -
+            unzip -oq /tmp/production-ui.zip -d .
+            echo "Applied production UI pass"
+          fi
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -92,16 +97,16 @@ jobs:
           test -f "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
           mkdir -p release
-          cp "$APK" "release/REMINDER-1.0.0-release.apk"
-          sha256sum "release/REMINDER-1.0.0-release.apk" > "release/REMINDER-1.0.0-release.apk.sha256"
+          cp "$APK" "release/REMINDER-1.0.1-release.apk"
+          sha256sum "release/REMINDER-1.0.1-release.apk" > "release/REMINDER-1.0.1-release.apk.sha256"
 
       - name: Upload signed APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: REMINDER-1.0.0-signed
+          name: REMINDER-1.0.1-signed
           path: |
-            release/REMINDER-1.0.0-release.apk
-            release/REMINDER-1.0.0-release.apk.sha256
+            release/REMINDER-1.0.1-release.apk
+            release/REMINDER-1.0.1-release.apk.sha256
           if-no-files-found: error
 
       - name: Publish GitHub Release for tag
@@ -109,6 +114,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release/REMINDER-1.0.0-release.apk
-            release/REMINDER-1.0.0-release.apk.sha256
+            release/REMINDER-1.0.1-release.apk
+            release/REMINDER-1.0.1-release.apk.sha256
           generate_release_notes: true
