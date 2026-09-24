@@ -24,6 +24,10 @@ jobs:
           if [ -d overrides ]; then
             cp -a overrides/. .
           fi
+          if [ -f qa/REMINDER_UI_QA_OVERRIDES.zip ]; then
+            unzip -oq qa/REMINDER_UI_QA_OVERRIDES.zip -d .
+            echo "Applied full UI QA overrides"
+          fi
           echo "Applied Figma UI overrides"
 
       - name: Set up JDK 17
