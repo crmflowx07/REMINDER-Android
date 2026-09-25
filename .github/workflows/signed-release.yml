@@ -54,7 +54,7 @@ jobs:
             echo "Applied materialized production overrides"
           fi
           if [ -f qa/final-production-overlay.b64 ]; then
-            tr -d '\\r\\n' < qa/final-production-overlay.b64 | base64 --decode > /tmp/final-production-overlay.zip
+            tr -d '\r\n' < qa/final-production-overlay.b64 | base64 --decode > /tmp/final-production-overlay.zip
             echo "2cb080f2f5b96da1994891bfaac17e1cebba2c12b571791bd635ee219b4b164f  /tmp/final-production-overlay.zip" | sha256sum -c -
             unzip -tq /tmp/final-production-overlay.zip
             unzip -oq /tmp/final-production-overlay.zip -d .
