@@ -1,0 +1,36 @@
+name: Export Current Production Source
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  export-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reconstruct current production source
+        shell: bash
+        run: |
+          base64 --decode source/reminder-source.zip.b64 > /tmp/reminder-source.zip
+          echo "8f9625a909cf964e1161e612aba93fb0385b92c3bd06bf1c37b28622df6839f6  /tmp/reminder-source.zip" | sha256sum -c -
+          unzip -oq /tmp/reminder-source.zip -d .
+          if [ -d overrides ]; then cp -a overrides/. .; fi
+          if [ -f qa/REMINDER_UI_QA_OVERRIDES.zip ]; then unzip -oq qa/REMINDER_UI_QA_OVERRIDES.zip -d .; fi
+          if compgen -G "qa/production-ui.part*" > /dev/null; then
+            cat qa/production-ui.part* | tr -d '\r\n' | base64 --decode > /tmp/production-ui.zip
+            unzip -oq /tmp/production-ui.zip -d .
+          fi
+          if [ -d production-overrides ]; then cp -a production-overrides/. .; fi
+          zip -qr /tmp/REMINDER-current-production-source.zip app build.gradle.kts settings.gradle.kts gradle.properties
+
+      - name: Upload current source
+        uses: actions/upload-artifact@v4
+        with:
+          name: REMINDER-current-production-source
+          path: /tmp/REMINDER-current-production-source.zip
+          if-no-files-found: error
+          retention-days: 1
