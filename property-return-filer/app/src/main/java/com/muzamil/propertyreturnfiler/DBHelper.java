@@ -6,7 +6,7 @@ import android.database.sqlite.*;
 import java.util.*;
 
 public class DBHelper extends SQLiteOpenHelper {
-    public static final int VERSION = 3;
+    public static final int VERSION = 4;
     public DBHelper(Context c){ super(c,"property_return_filer.db",null,VERSION); }
 
     @Override public void onCreate(SQLiteDatabase db){
@@ -15,48 +15,101 @@ public class DBHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE reminders(id INTEGER PRIMARY KEY AUTOINCREMENT,clientId INTEGER,title TEXT,message TEXT,scheduledAt INTEGER,repeatRule TEXT,status TEXT,channel TEXT)");
         db.execSQL("CREATE TABLE payments(id INTEGER PRIMARY KEY AUTOINCREMENT,clientId INTEGER,title TEXT,amount REAL,dueDate TEXT,status TEXT,notes TEXT)");
         db.execSQL("CREATE TABLE documents(id INTEGER PRIMARY KEY AUTOINCREMENT,clientId INTEGER,title TEXT,category TEXT,status TEXT,notes TEXT)");
-        seed(db);
+        seedExactDemo(db);
     }
 
     @Override public void onUpgrade(SQLiteDatabase db,int oldV,int newV){
-        db.execSQL("DROP TABLE IF EXISTS documents");
-        db.execSQL("DROP TABLE IF EXISTS payments");
-        db.execSQL("DROP TABLE IF EXISTS reminders");
-        db.execSQL("DROP TABLE IF EXISTS filings");
-        db.execSQL("DROP TABLE IF EXISTS clients");
-        onCreate(db);
+        if(oldV < 4){
+            db.execSQL("DELETE FROM documents");
+            db.execSQL("DELETE FROM payments");
+            db.execSQL("DELETE FROM reminders");
+            db.execSQL("DELETE FROM filings");
+            db.execSQL("DELETE FROM clients");
+            seedExactDemo(db);
+        }
     }
 
-    private long seedClient(SQLiteDatabase db,String n,String w,String b,String type,String due){
-        ContentValues v=new ContentValues();v.put("name",n);v.put("whatsapp",w);v.put("phone",w);v.put("business",b);v.put("taxType",type);v.put("status","Active");v.put("nextDue",due);v.put("createdAt",System.currentTimeMillis());return db.insert("clients",null,v);
+    private long client(SQLiteDatabase db,String n,String w,String ntn,String business,String type,String status,String due,String cnic){
+        ContentValues v=new ContentValues();
+        v.put("name",n);v.put("whatsapp",w);v.put("phone",w);v.put("ntn",ntn);v.put("business",business);
+        v.put("taxType",type);v.put("status",status);v.put("nextDue",due);v.put("cnic",cnic);
+        v.put("email",n.toLowerCase(Locale.US).replace(" ",".")+"@example.com");
+        v.put("address","Punjab, Pakistan");v.put("notes","Regular client. Keep monthly filing and reminder record updated.");
+        v.put("createdAt",System.currentTimeMillis());
+        return db.insert("clients",null,v);
     }
-    private void seed(SQLiteDatabase db){
-        long a=seedClient(db,"Ali Traders","+923001234567","Ali Traders","Sales Tax","30 Aug 2026");
-        long b=seedClient(db,"Khan Property Solutions","+923117654321","Khan Property Solutions","Income Tax","15 Sep 2026");
-        long c=seedClient(db,"Muzamil Estate Services","+923221112233","Muzamil Estate Services","Both","30 Sep 2026");
-        addFiling(db,a,"August",2026,"Sales Tax","30 Aug 2026","Pending");
-        addFiling(db,b,"September",2026,"Income Tax","15 Sep 2026","Waiting Documents");
-        addFiling(db,c,"September",2026,"Both","30 Sep 2026","Pending");
-        addReminder(db,a,"August return reminder","Kindly August return documents provide kar dein.",System.currentTimeMillis()+86400000L,"Monthly","Scheduled","WhatsApp");
+    private void filing(SQLiteDatabase db,long cid,String month,int year,String type,String due,String status){
+        ContentValues v=new ContentValues();v.put("clientId",cid);v.put("month",month);v.put("year",year);v.put("type",type);v.put("dueDate",due);v.put("status",status);
+        if("Filed".equals(status))v.put("filedDate",due);
+        db.insert("filings",null,v);
+    }
+    private void reminder(SQLiteDatabase db,long cid,String title,String msg,long at,String repeat){
+        ContentValues v=new ContentValues();v.put("clientId",cid);v.put("title",title);v.put("message",msg);v.put("scheduledAt",at);v.put("repeatRule",repeat);v.put("status","Scheduled");v.put("channel","Local + WhatsApp");db.insert("reminders",null,v);
     }
 
-    private void addFiling(SQLiteDatabase db,long clientId,String month,int year,String type,String due,String status){ContentValues v=new ContentValues();v.put("clientId",clientId);v.put("month",month);v.put("year",year);v.put("type",type);v.put("dueDate",due);v.put("status",status);db.insert("filings",null,v);}
-    private void addReminder(SQLiteDatabase db,long clientId,String title,String message,long at,String repeat,String status,String channel){ContentValues v=new ContentValues();v.put("clientId",clientId);v.put("title",title);v.put("message",message);v.put("scheduledAt",at);v.put("repeatRule",repeat);v.put("status",status);v.put("channel",channel);db.insert("reminders",null,v);}
+    private void seedExactDemo(SQLiteDatabase db){
+        String[][] core={
+          {"Ahmed Raza","+923001234567","1234567-8","Online Electronics Store","Salaried / Business","Active","15 Aug 2026","35202-1234567-1"},
+          {"Sana Khan","+923219876543","3456789-0","Sana Boutique","Income Tax Return (ITR)","Filed","31 Jul 2026","35202-3456789-2"},
+          {"Faisal Ahmed","+923334567890","7896543-2","FA Consultants","Income Tax Return (ITR)","Pending","31 Jul 2026","35202-7896543-3"},
+          {"Ayesha Malik","+923005550123","1122233-4","Ayesha Traders","Sales Tax Return (STR)","Active","31 Aug 2026","35202-1122233-4"},
+          {"Usman Sheikh","+923212223344","9876543-2","Usman Enterprises","Sales Tax Return (STR)","Filed","15 Aug 2026","35202-9876543-5"},
+          {"Mubeen Traders","+923347778899","4567891-0","Mubeen Traders","Income Tax Return (ITR)","Pending","15 Sep 2026","35202-4567891-6"},
+          {"Zahid Hussain","+923001239876","3344556-6","Zahid & Co.","Income Tax Return (ITR)","Active","15 Sep 2026","35202-3344556-7"},
+          {"Ali Enterprises","+923111112222","1234567-8","Ali Enterprises","Sales Tax Return (STR)","Pending","15 Jul 2026","35202-2233445-8"}
+        };
+        long[] ids=new long[48];
+        for(int i=0;i<core.length;i++)ids[i]=client(db,core[i][0],core[i][1],core[i][2],core[i][3],core[i][4],core[i][5],core[i][6],core[i][7]);
+        for(int i=8;i<48;i++){
+            int num=i+1;
+            String name=(i%3==0?"Hassan ":i%3==1?"Bilal ":"Kamran ")+num;
+            String phone="+923"+String.format(Locale.US,"%09d",100000000+i*7919);
+            String ntn=String.format(Locale.US,"%07d-%d",2200000+i*113,(i%9)+1);
+            String type=i%2==0?"Income Tax Return (ITR)":"Sales Tax Return (STR)";
+            String status=i<20?"Pending":(i<48?"Filed":"Active");
+            String due=i%3==0?"31 Jul 2026":i%3==1?"31 Aug 2026":"15 Sep 2026";
+            ids[i]=client(db,name,phone,ntn,name+" Business",type,status,due,"35202-"+String.format(Locale.US,"%07d",5000000+i)+"-"+((i%9)+1));
+        }
+
+        // exactly 12 pending filings
+        for(int i=0;i<12;i++){
+            String month=i<4?"July":i<8?"August":"September";
+            String due=i<4?"31 Jul 2026":i<8?"31 Aug 2026":"15 Sep 2026";
+            filing(db,ids[i],month,2026,i%2==0?"Income Tax Return (ITR)":"Sales Tax Return (STR)",due,"Pending");
+        }
+        // exactly 28 filed records
+        for(int i=12;i<40;i++){
+            String month=i%2==0?"July":"August";
+            String due=i%2==0?"20 Jul 2026":"20 Aug 2026";
+            filing(db,ids[i],month,2026,i%2==0?"Income Tax Return (ITR)":"Sales Tax Return (STR)",due,"Filed");
+        }
+
+        long now=System.currentTimeMillis();
+        reminder(db,ids[0],"Ahmed Raza Return","Kindly apne return documents provide kar dein.",now+86400000L,"Monthly");
+        reminder(db,ids[2],"Faisal Ahmed Follow-up","Income tax return due soon.",now+2*86400000L,"Once");
+        reminder(db,ids[3],"Ayesha Malik STR","Sales tax return reminder.",now+3*86400000L,"Monthly");
+        reminder(db,ids[5],"Mubeen Traders ITR","Return documents required.",now+4*86400000L,"Monthly");
+        reminder(db,ids[7],"Ali Enterprises STR","Sales tax return is overdue.",now+5*86400000L,"Once");
+
+        ContentValues p=new ContentValues();p.put("clientId",ids[0]);p.put("title","Monthly Consultancy");p.put("amount",25000);p.put("dueDate","10 Aug 2026");p.put("status","Paid");p.put("notes","Received");db.insert("payments",null,p);
+        ContentValues d=new ContentValues();d.put("clientId",ids[0]);d.put("title","Bank Statement");d.put("category","FBR Documents");d.put("status","Received");d.put("notes","July statement");db.insert("documents",null,d);
+    }
 
     public long saveClient(long id,String name,String whatsapp,String phone,String cnic,String ntn,String business,String taxType,String status,String nextDue,String email,String address,String notes){
-        ContentValues v=new ContentValues();v.put("name",name);v.put("whatsapp",whatsapp);v.put("phone",phone);v.put("cnic",cnic);v.put("ntn",ntn);v.put("business",business);v.put("taxType",taxType);v.put("status",status);v.put("nextDue",nextDue);v.put("email",email);v.put("address",address);v.put("notes",notes);v.put("createdAt",System.currentTimeMillis());
-        if(id>0){getWritableDatabase().update("clients",v,"id=?",new String[]{String.valueOf(id)});return id;}return getWritableDatabase().insert("clients",null,v);
+        ContentValues v=new ContentValues();v.put("name",name);v.put("whatsapp",whatsapp);v.put("phone",phone);v.put("cnic",cnic);v.put("ntn",ntn);v.put("business",business);v.put("taxType",taxType);v.put("status",status);v.put("nextDue",nextDue);v.put("email",email);v.put("address",address);v.put("notes",notes);
+        if(id>0){getWritableDatabase().update("clients",v,"id=?",new String[]{String.valueOf(id)});return id;}
+        v.put("createdAt",System.currentTimeMillis());return getWritableDatabase().insert("clients",null,v);
     }
-    public void deleteClient(long id){SQLiteDatabase d=getWritableDatabase();d.delete("filings","clientId=?",new String[]{""+id});d.delete("reminders","clientId=?",new String[]{""+id});d.delete("payments","clientId=?",new String[]{""+id});d.delete("documents","clientId=?",new String[]{""+id});d.delete("clients","id=?",new String[]{""+id});}
+    public void deleteClient(long id){SQLiteDatabase d=getWritableDatabase();String[] a={""+id};d.delete("filings","clientId=?",a);d.delete("reminders","clientId=?",a);d.delete("payments","clientId=?",a);d.delete("documents","clientId=?",a);d.delete("clients","id=?",a);}
 
     public Client client(long id){Cursor c=getReadableDatabase().rawQuery("SELECT id,name,whatsapp,phone,cnic,ntn,business,taxType,status,nextDue,email,address,notes FROM clients WHERE id=?",new String[]{""+id});Client x=null;if(c.moveToFirst())x=fromClient(c);c.close();return x;}
     private Client fromClient(Cursor c){return new Client(c.getLong(0),c.getString(1),c.getString(2),c.getString(3),c.getString(4),c.getString(5),c.getString(6),c.getString(7),c.getString(8),c.getString(9),c.getString(10),c.getString(11),c.getString(12));}
-    public List<Client> clients(String q){ArrayList<Client> out=new ArrayList<>();String like="%"+(q==null?"":q)+"%";Cursor c=getReadableDatabase().rawQuery("SELECT id,name,whatsapp,phone,cnic,ntn,business,taxType,status,nextDue,email,address,notes FROM clients WHERE name LIKE ? OR business LIKE ? OR whatsapp LIKE ? OR ntn LIKE ? ORDER BY id DESC",new String[]{like,like,like,like});while(c.moveToNext())out.add(fromClient(c));c.close();return out;}
+    public List<Client> clients(String q){ArrayList<Client> out=new ArrayList<>();String like="%"+(q==null?"":q)+"%";Cursor c=getReadableDatabase().rawQuery("SELECT id,name,whatsapp,phone,cnic,ntn,business,taxType,status,nextDue,email,address,notes FROM clients WHERE name LIKE ? OR business LIKE ? OR whatsapp LIKE ? OR ntn LIKE ? ORDER BY id ASC",new String[]{like,like,like,like});while(c.moveToNext())out.add(fromClient(c));c.close();return out;}
+    private int scalar(String sql){Cursor c=getReadableDatabase().rawQuery(sql,null);c.moveToFirst();int v=c.getInt(0);c.close();return v;}
     public int countClients(){return scalar("SELECT COUNT(*) FROM clients");}
-    public int countPending(){return scalar("SELECT COUNT(*) FROM filings WHERE status!='Filed' AND status!='Completed'");}
+    public int countPending(){return scalar("SELECT COUNT(*) FROM filings WHERE status='Pending'");}
     public int countFiled(){return scalar("SELECT COUNT(*) FROM filings WHERE status='Filed' OR status='Completed'");}
     public int countReminders(){return scalar("SELECT COUNT(*) FROM reminders WHERE status='Scheduled'");}
-    private int scalar(String sql){Cursor c=getReadableDatabase().rawQuery(sql,null);c.moveToFirst();int v=c.getInt(0);c.close();return v;}
 
     public long addFiling(long clientId,String month,int year,String type,String due,String status,String notes){ContentValues v=new ContentValues();v.put("clientId",clientId);v.put("month",month);v.put("year",year);v.put("type",type);v.put("dueDate",due);v.put("status",status);v.put("notes",notes);return getWritableDatabase().insert("filings",null,v);}
     public void setFilingStatus(long id,String status){ContentValues v=new ContentValues();v.put("status",status);if("Filed".equals(status)||"Completed".equals(status))v.put("filedDate",new java.text.SimpleDateFormat("dd MMM yyyy",Locale.US).format(new Date()));getWritableDatabase().update("filings",v,"id=?",new String[]{""+id});}
@@ -68,7 +121,6 @@ public class DBHelper extends SQLiteOpenHelper {
 
     public long addPayment(long clientId,String title,double amount,String due,String status,String notes){ContentValues v=new ContentValues();v.put("clientId",clientId);v.put("title",title);v.put("amount",amount);v.put("dueDate",due);v.put("status",status);v.put("notes",notes);return getWritableDatabase().insert("payments",null,v);}
     public List<Payment> payments(long clientId){ArrayList<Payment> l=new ArrayList<>();Cursor c=getReadableDatabase().rawQuery("SELECT id,title,amount,dueDate,status,notes FROM payments WHERE clientId=? ORDER BY id DESC",new String[]{""+clientId});while(c.moveToNext())l.add(new Payment(c.getLong(0),c.getString(1),c.getDouble(2),c.getString(3),c.getString(4),c.getString(5)));c.close();return l;}
-
     public long addDocument(long clientId,String title,String category,String status,String notes){ContentValues v=new ContentValues();v.put("clientId",clientId);v.put("title",title);v.put("category",category);v.put("status",status);v.put("notes",notes);return getWritableDatabase().insert("documents",null,v);}
     public List<Document> documents(long clientId){ArrayList<Document> l=new ArrayList<>();Cursor c=getReadableDatabase().rawQuery("SELECT id,title,category,status,notes FROM documents WHERE clientId=? ORDER BY id DESC",new String[]{""+clientId});while(c.moveToNext())l.add(new Document(c.getLong(0),c.getString(1),c.getString(2),c.getString(3),c.getString(4)));c.close();return l;}
 
