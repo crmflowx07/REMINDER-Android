@@ -6,6 +6,10 @@ on:
     paths:
       - 'property-return-filer/**'
       - '.github/workflows/property-return-filer.yml'
+  pull_request:
+    paths:
+      - 'property-return-filer/**'
+      - '.github/workflows/property-return-filer.yml'
 jobs:
   build:
     runs-on: ubuntu-latest
