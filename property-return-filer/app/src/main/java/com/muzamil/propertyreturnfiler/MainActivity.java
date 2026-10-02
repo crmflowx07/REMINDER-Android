@@ -43,7 +43,11 @@ public class MainActivity extends Activity {
     private void showSplash(){
         LinearLayout page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);page.setGravity(Gravity.CENTER_HORIZONTAL);page.setPadding(dp(28),dp(46),dp(28),dp(28));page.setBackground(grad(Color.rgb(241,248,255),Color.WHITE,0));
         TextView mini=tv("PAKISTAN TAX PROFESSIONAL",11,BLUE2,true);mini.setLetterSpacing(.12f);page.addView(mini);
-        ImageView logo=new ImageView(this);logo.setImageResource(R.drawable.ic_app);logo.setPadding(dp(16),dp(16),dp(16),dp(16));logo.setBackground(grad(Color.rgb(20,128,255),Color.rgb(4,46,159),28));logo.setElevation(dp(12));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dp(126),dp(126));lp.setMargins(0,dp(54),0,dp(30));page.addView(logo,lp);
+        FrameLayout scene=new FrameLayout(this);
+        ImageView building=new ImageView(this);building.setImageResource(R.drawable.bg_fbr_building);building.setScaleType(ImageView.ScaleType.FIT_XY);scene.addView(building,new FrameLayout.LayoutParams(-1,dp(190)));
+        ImageView logo=new ImageView(this);logo.setImageResource(R.drawable.ic_app);logo.setPadding(dp(13),dp(13),dp(13),dp(13));logo.setBackground(grad(Color.rgb(20,128,255),Color.rgb(4,46,159),28));logo.setElevation(dp(12));
+        FrameLayout.LayoutParams ilp=new FrameLayout.LayoutParams(dp(126),dp(126),Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);ilp.bottomMargin=dp(4);scene.addView(logo,ilp);
+        LinearLayout.LayoutParams sceneLp=new LinearLayout.LayoutParams(-1,dp(230));sceneLp.setMargins(0,dp(18),0,dp(18));page.addView(scene,sceneLp);
         LinearLayout brand=new LinearLayout(this);brand.setGravity(Gravity.CENTER);TextView f=tv("FBR",34,BLUE2,true);TextView rest=tv(" Return Filer",30,INK,true);brand.addView(f);brand.addView(rest);page.addView(brand);
         TextView sub=tv("Your Trusted Partner\nin Tax Compliance",18,MUTED,false);sub.setGravity(Gravity.CENTER);sub.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-1,-2);sp.setMargins(0,dp(8),0,dp(32));page.addView(sub,sp);
         page.addView(featureLine("Manage Clients"));page.addView(featureLine("Track Returns"));page.addView(featureLine("Never Miss a Deadline"));
@@ -98,7 +102,18 @@ public class MainActivity extends Activity {
     }
     private View chip(String s,boolean on){TextView t=tv(s,10,on?Color.WHITE:MUTED,on);t.setGravity(Gravity.CENTER);t.setPadding(dp(12),0,dp(12),0);t.setBackground(rounded(on?BLUE:Color.WHITE,18));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-2,dp(34));p.setMargins(0,0,dp(7),0);t.setLayoutParams(p);return t;}
     private void renderClients(LinearLayout list,String q){list.removeAllViews();for(DBHelper.Client c:db.clients(q)){LinearLayout box=card();box.setOrientation(LinearLayout.HORIZONTAL);box.setGravity(Gravity.CENTER_VERTICAL);TextView av=avatar(initials(c.name),48);box.addView(av,new LinearLayout.LayoutParams(dp(48),dp(48)));LinearLayout tx=new LinearLayout(this);tx.setOrientation(LinearLayout.VERTICAL);tx.setPadding(dp(12),0,0,0);tx.addView(tv(c.name,14,INK,true));tx.addView(tv("NTN "+safe(c.ntn),10,MUTED,false));TextView wa=iconLabel(safe(c.whatsapp),R.drawable.ic_chat,10,GREEN,false);tx.addView(wa);box.addView(tx,new LinearLayout.LayoutParams(0,-2,1));TextView status=statusChip(c.status==null?"Active":c.status);box.addView(status);box.setOnClickListener(v->clientProfile(c.id));list.addView(box);}}
-    private TextView avatar(String s,int size){TextView a=tv(s,14,Color.WHITE,true);a.setGravity(Gravity.CENTER);a.setBackground(grad(Color.rgb(120,182,255),BLUE2,30));return a;}
+    private int avatarRes(String s){
+        if("AR".equals(s))return R.drawable.avatar_ar;
+        if("SK".equals(s))return R.drawable.avatar_sk;
+        if("FA".equals(s))return R.drawable.avatar_fa;
+        if("AM".equals(s))return R.drawable.avatar_am;
+        if("US".equals(s))return R.drawable.avatar_us;
+        if("MT".equals(s))return R.drawable.avatar_mt;
+        if("ZH".equals(s))return R.drawable.avatar_zh;
+        if("AE".equals(s))return R.drawable.avatar_ae;
+        return R.drawable.avatar_default;
+    }
+    private TextView avatar(String s,int size){TextView a=tv("",14,Color.TRANSPARENT,true);a.setGravity(Gravity.CENTER);a.setBackgroundResource(avatarRes(s));return a;}
     private TextView statusChip(String s){boolean filed="Filed".equalsIgnoreCase(s)||"Completed".equalsIgnoreCase(s);boolean pend="Pending".equalsIgnoreCase(s);int bg=filed?Color.rgb(224,249,235):pend?Color.rgb(255,239,222):Color.rgb(229,242,255);int fg=filed?GREEN:pend?ORANGE:BLUE2;TextView t=tv(s,10,fg,true);t.setPadding(dp(9),dp(5),dp(9),dp(5));t.setBackground(rounded(bg,14));return t;}
 
     private void clientProfile(long id){
