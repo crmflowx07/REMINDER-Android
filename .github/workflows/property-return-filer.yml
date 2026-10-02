@@ -27,6 +27,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: UI and Code QA
+        run: gradle -p property-return-filer :app:lintDebug
       - name: Build APK
         run: gradle -p property-return-filer :app:assembleDebug
       - uses: actions/upload-artifact@v4
