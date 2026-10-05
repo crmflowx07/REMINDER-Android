@@ -5,6 +5,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import java.lang.reflect.Method;
+import java.lang.reflect.Field;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
@@ -39,10 +40,13 @@ public class MainActivityFlowTest {
 
     @Test public void dashboardRendersWithoutCrash() throws Exception {
         MainActivity activity=Robolectric.buildActivity(MainActivity.class).setup().get();
-        Method m=MainActivity.class.getDeclaredMethod("openDashboardSafe");
+        Method m=MainActivity.class.getDeclaredMethod("showDashboard");
         m.setAccessible(true);
         m.invoke(activity);
-        View dashboard=activity.getWindow().getDecorView();
+        Field rf=MainActivity.class.getDeclaredField("root");
+        rf.setAccessible(true);
+        View dashboard=(View)rf.get(activity);
+        assertNotNull("Dashboard root must be created",dashboard);
         assertNotNull("Dashboard must show Total Clients",findText(dashboard,"Total Clients"));
         assertNotNull("Dashboard must show Quick Actions",findText(dashboard,"Quick Actions"));
         assertNotNull("Dashboard must show Good Morning",findText(dashboard,"Good Morning"));
