@@ -36,16 +36,16 @@ jobs:
       - name: Pixel emulator runtime QA
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 29
           target: google_apis
           arch: x86_64
-          profile: pixel_6
+          profile: pixel_2
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           script: |
             set -euo pipefail
             APK=property-return-filer/app/build/outputs/apk/debug/app-debug.apk
-            PKG=com.muzamil.fbrreturnfiler.clean
+            PKG=com.muzamil.fbrreturnfiler.v7
             ACT=com.muzamil.propertyreturnfiler.MainActivity
 
             adb uninstall "$PKG" >/dev/null 2>&1 || true
@@ -111,7 +111,7 @@ jobs:
               adb logcat -d -v time
               exit 1
             fi
-            echo "PASS: fresh install, launch, Get Started, Dashboard and Clients all runtime-tested on API 35"
+            echo "PASS: fresh install, launch, Get Started, Dashboard and Clients all runtime-tested on API 29"
 
       - uses: actions/upload-artifact@v4
         with:
