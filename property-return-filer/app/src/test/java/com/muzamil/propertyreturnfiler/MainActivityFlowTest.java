@@ -4,6 +4,8 @@ import static org.junit.Assert.*;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.os.Looper;
+import org.robolectric.Shadows;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
@@ -35,6 +37,7 @@ public class MainActivityFlowTest {
         assertNotNull("Get Started button must exist", getStarted);
         assertTrue("Get Started must be clickable", getStarted.isClickable());
         getStarted.performClick();
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
 
         View dashboard=activity.getWindow().getDecorView();
         assertNotNull("Dashboard must show Total Clients", findText(dashboard,"Total Clients"));
