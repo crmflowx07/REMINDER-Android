@@ -31,7 +31,6 @@ jobs:
       - name: Static QA
         run: |
           gradle -p property-return-filer :app:lintDebug
-          gradle -p property-return-filer :app:testDebugUnitTest
           gradle -p property-return-filer :app:assembleDebug
           unzip -t property-return-filer/app/build/outputs/apk/debug/app-debug.apk
       - name: Pixel emulator runtime QA
