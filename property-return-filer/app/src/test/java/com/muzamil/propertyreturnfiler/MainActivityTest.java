@@ -41,7 +41,7 @@ public class MainActivityTest {
         assertNotNull("Dashboard must show Total Clients", findText(dashboardRoot, "Total Clients"));
         assertNotNull("Dashboard must show Quick Actions", findText(dashboardRoot, "Quick Actions"));
 
-        View clients = findText(dashboardRoot, "Clients");
+        View clients = findExactText(dashboardRoot, "Clients");
         assertNotNull("Dashboard must expose Clients", clients);
         clients.performClick();
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
@@ -59,6 +59,21 @@ public class MainActivityTest {
             ViewGroup g=(ViewGroup)v;
             for(int i=0;i<g.getChildCount();i++){
                 View hit=findText(g.getChildAt(i),needle);
+                if(hit!=null)return hit;
+            }
+        }
+        return null;
+    }
+
+    private View findExactText(View v, String target) {
+        if (v instanceof TextView) {
+            CharSequence s=((TextView)v).getText();
+            if(s!=null && s.toString().equals(target)) return v;
+        }
+        if(v instanceof ViewGroup){
+            ViewGroup g=(ViewGroup)v;
+            for(int i=0;i<g.getChildCount();i++){
+                View hit=findExactText(g.getChildAt(i),target);
                 if(hit!=null)return hit;
             }
         }
