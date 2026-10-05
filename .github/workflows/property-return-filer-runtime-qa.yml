@@ -1,0 +1,71 @@
+name: FBR Return Filer Runtime QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [ property-return-filer ]
+    paths:
+      - 'property-return-filer/**'
+      - '.github/workflows/property-return-filer-runtime-qa.yml'
+jobs:
+  runtime-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK packages
+        run: |
+          SDKMANAGER=/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager
+          yes | $SDKMANAGER --licenses >/dev/null || true
+          $SDKMANAGER "platforms;android-35" "build-tools;35.0.0" "platform-tools" "system-images;android-35;google_apis;x86_64" "emulator"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Lint and build
+        run: |
+          gradle -p property-return-filer :app:lintDebug
+          gradle -p property-return-filer :app:assembleDebug
+      - name: Runtime smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: |
+            set -e
+            APK=property-return-filer/app/build/outputs/apk/debug/app-debug.apk
+            adb install -r "$APK"
+            adb logcat -c
+            adb shell am force-stop com.muzamil.propertyreturnfiler
+            adb shell am start -W -n com.muzamil.propertyreturnfiler/.MainActivity
+            sleep 3
+            adb shell uiautomator dump /sdcard/window.xml
+            adb pull /sdcard/window.xml window.xml
+            python3 - <<'PY'
+            import re,sys
+            xml=open('window.xml',encoding='utf-8').read()
+            m=re.search(r'text="Get Started[^"]*"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',xml)
+            if not m:
+                print(xml[:6000])
+                sys.exit("Get Started button not found")
+            x1,y1,x2,y2=map(int,m.groups())
+            open('tap.txt','w').write(f"{(x1+x2)//2} {(y1+y2)//2}")
+            PY
+            read X Y < tap.txt
+            adb shell input tap "$X" "$Y"
+            sleep 4
+            adb shell uiautomator dump /sdcard/after.xml
+            adb pull /sdcard/after.xml after.xml
+            grep -q "Total Clients" after.xml
+            adb shell dumpsys activity activities | grep -q "com.muzamil.propertyreturnfiler/.MainActivity"
+            if adb logcat -d -v brief | grep -E "FATAL EXCEPTION|AndroidRuntime.*com.muzamil.propertyreturnfiler"; then
+              adb logcat -d -v time
+              exit 1
+            fi
+            echo "Runtime QA passed: launch -> Get Started -> dashboard"
