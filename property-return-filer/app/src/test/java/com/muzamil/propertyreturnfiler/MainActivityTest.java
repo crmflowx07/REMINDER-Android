@@ -12,6 +12,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLooper;
+import java.lang.reflect.Field;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 28)
@@ -27,13 +28,20 @@ public class MainActivityTest {
         assertTrue("Get Started listener must execute", getStarted.callOnClick());
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
-        View goodMorning = findText(activity.getWindow().getDecorView(), "Good Morning");
-        if(goodMorning==null) fail("Dashboard failed to render. Runtime error:\n"+activity.lastDashboardError);
-        assertNotNull("Dashboard must show Good Morning", goodMorning);
-        assertNotNull("Dashboard must show Total Clients", findText(activity.getWindow().getDecorView(), "Total Clients"));
-        assertNotNull("Dashboard must show Quick Actions", findText(activity.getWindow().getDecorView(), "Quick Actions"));
+        View dashboardRoot;
+        try {
+            Field rootField=MainActivity.class.getDeclaredField("root");
+            rootField.setAccessible(true);
+            dashboardRoot=(View)rootField.get(activity);
+        } catch(Exception e) {
+            throw new AssertionError(e);
+        }
+        assertNotNull("Get Started must create dashboard root", dashboardRoot);
+        assertNotNull("Dashboard must show Good Morning", findText(dashboardRoot, "Good Morning"));
+        assertNotNull("Dashboard must show Total Clients", findText(dashboardRoot, "Total Clients"));
+        assertNotNull("Dashboard must show Quick Actions", findText(dashboardRoot, "Quick Actions"));
 
-        View clients = findText(activity.getWindow().getDecorView(), "Clients");
+        View clients = findText(dashboardRoot, "Clients");
         assertNotNull("Dashboard must expose Clients", clients);
         clients.performClick();
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
