@@ -27,7 +27,9 @@ public class MainActivityTest {
         getStarted.performClick();
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
-        assertNotNull("Dashboard must show Good Morning", findText(activity.getWindow().getDecorView(), "Good Morning"));
+        View goodMorning = findText(activity.getWindow().getDecorView(), "Good Morning");
+        if(goodMorning==null) fail("Dashboard failed to render. Runtime error:\n"+activity.lastDashboardError);
+        assertNotNull("Dashboard must show Good Morning", goodMorning);
         assertNotNull("Dashboard must show Total Clients", findText(activity.getWindow().getDecorView(), "Total Clients"));
         assertNotNull("Dashboard must show Quick Actions", findText(activity.getWindow().getDecorView(), "Quick Actions"));
 
