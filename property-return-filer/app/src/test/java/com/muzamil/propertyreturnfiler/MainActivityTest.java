@@ -43,7 +43,10 @@ public class MainActivityTest {
 
         View clients = findExactText(dashboardRoot, "Clients");
         assertNotNull("Dashboard must expose Clients", clients);
-        clients.performClick();
+        View clientsTarget = clients.isClickable() ? clients : (View) clients.getParent();
+        assertNotNull("Clients clickable parent must exist", clientsTarget);
+        assertTrue("Clients target must have click listener", clientsTarget.hasOnClickListeners());
+        assertTrue("Clients click listener must execute", clientsTarget.callOnClick());
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
         assertNotNull("Clients screen must show search field", findHint(activity.getWindow().getDecorView(), "Search by name"));
