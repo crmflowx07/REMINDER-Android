@@ -6,7 +6,7 @@ import android.database.sqlite.*;
 import java.util.*;
 
 public class DBHelper extends SQLiteOpenHelper {
-    public static final int VERSION = 4;
+    public static final int VERSION = 5;
     public DBHelper(Context c){ super(c,"property_return_filer.db",null,VERSION); }
 
     @Override public void onCreate(SQLiteDatabase db){
@@ -19,14 +19,15 @@ public class DBHelper extends SQLiteOpenHelper {
     }
 
     @Override public void onUpgrade(SQLiteDatabase db,int oldV,int newV){
-        if(oldV < 4){
-            db.execSQL("DELETE FROM documents");
-            db.execSQL("DELETE FROM payments");
-            db.execSQL("DELETE FROM reminders");
-            db.execSQL("DELETE FROM filings");
-            db.execSQL("DELETE FROM clients");
-            seedExactDemo(db);
-        }
+        // Safe reset for early test builds whose schemas were different.
+        // DROP IF EXISTS avoids crashes when upgrading from v1/v2/v3 builds
+        // that did not yet contain all ERP tables.
+        db.execSQL("DROP TABLE IF EXISTS documents");
+        db.execSQL("DROP TABLE IF EXISTS payments");
+        db.execSQL("DROP TABLE IF EXISTS reminders");
+        db.execSQL("DROP TABLE IF EXISTS filings");
+        db.execSQL("DROP TABLE IF EXISTS clients");
+        onCreate(db);
     }
 
     private long client(SQLiteDatabase db,String n,String w,String ntn,String business,String type,String status,String due,String cnic){
