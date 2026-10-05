@@ -33,6 +33,7 @@ public class MainActivity extends Activity {
     private LinearLayout body;
     private LinearLayout root;
     private String activeNav = "home";
+    String lastDashboardError = "";
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
