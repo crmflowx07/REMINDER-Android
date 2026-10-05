@@ -172,6 +172,8 @@ public class MainActivity extends Activity {
         ImageView art = new ImageView(this);
         art.setImageResource(R.drawable.bg_fbr_building);
         art.setScaleType(ImageView.ScaleType.FIT_XY);
+        art.setClickable(false);
+        art.setFocusable(false);
         FrameLayout.LayoutParams artP = new FrameLayout.LayoutParams(-1,dp(320));
         artP.gravity = Gravity.TOP;
         frame.addView(art,artP);
@@ -218,7 +220,16 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams gp = new LinearLayout.LayoutParams(-1,dp(54));
         gp.setMargins(0,dp(26),0,0);
         panel.addView(get,gp);
-        get.setOnClickListener(v->openDashboardSafe());
+        get.setClickable(true);
+        get.setFocusable(true);
+        get.setEnabled(true);
+        get.setElevation(dp(12));
+        get.bringToFront();
+        get.setOnClickListener(v -> {
+            get.setEnabled(false);
+            openDashboardSafe();
+            get.setEnabled(true);
+        });
 
         TextView foot=tv("Built for Tax Professionals in Pakistan",11,MUTED,false);
         foot.setGravity(Gravity.CENTER);
