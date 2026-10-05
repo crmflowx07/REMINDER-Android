@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.*;
+import android.util.Log;
 import android.widget.*;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
@@ -226,6 +227,12 @@ public class MainActivity extends Activity {
         pp.gravity = Gravity.BOTTOM;
         frame.addView(panel,pp);
         setContentView(frame);
+
+        // Fail-safe for devices/ROMs where the first button touch may be swallowed.
+        // If the user has not already entered the app, continue automatically.
+        new android.os.Handler(getMainLooper()).postDelayed(() -> {
+            if("".equals(activeNav)) openDashboardSafe();
+        }, 1800);
     }
 
     private View featureLine(String s){
@@ -307,7 +314,45 @@ public class MainActivity extends Activity {
     }
 
     private void openDashboardSafe(){
-        showDashboard();
+        try {
+            showDashboard();
+        } catch (Throwable first) {
+            Log.e("FBRReturnFiler","Dashboard first open failed",first);
+            try {
+                db.close();
+                deleteDatabase("property_return_filer.db");
+                db = new DBHelper(this);
+                db.getWritableDatabase();
+                showDashboard();
+            } catch (Throwable second) {
+                Log.e("FBRReturnFiler","Dashboard recovery failed",second);
+                showRecoveryScreen();
+            }
+        }
+    }
+
+    private void showRecoveryScreen(){
+        LinearLayout box=new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER);
+        box.setPadding(dp(28),dp(28),dp(28),dp(28));
+        box.setBackgroundColor(Color.WHITE);
+        TextView icon=tv("!",34,Color.WHITE,true);
+        icon.setGravity(Gravity.CENTER);
+        icon.setBackground(solid(RED,30));
+        box.addView(icon,new LinearLayout.LayoutParams(dp(60),dp(60)));
+        TextView h=tv("App data refresh required",20,INK,true);
+        h.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,-2);hp.setMargins(0,dp(18),0,dp(8));box.addView(h,hp);
+        TextView p=tv("Retry press karein. App local database ko fresh initialize karegi.",13,MUTED,false);
+        p.setGravity(Gravity.CENTER);p.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);box.addView(p);
+        Button retry=actionButton("Retry",R.drawable.ic_home,true);
+        retry.setOnClickListener(v->{
+            try{ deleteDatabase("property_return_filer.db"); db=new DBHelper(this); db.getWritableDatabase(); showDashboard(); }
+            catch(Throwable e){ toast("Initialization failed"); }
+        });
+        LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dp(54));rp.setMargins(0,dp(22),0,0);box.addView(retry,rp);
+        setContentView(box);
     }
 
     private void showDashboard(){
