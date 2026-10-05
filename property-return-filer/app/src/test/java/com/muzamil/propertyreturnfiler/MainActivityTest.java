@@ -24,7 +24,7 @@ public class MainActivityTest {
 
         View getStarted = findText(activity.getWindow().getDecorView(), "Get Started");
         assertNotNull("Splash must contain Get Started", getStarted);
-        getStarted.performClick();
+        assertTrue("Get Started listener must execute", getStarted.callOnClick());
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
         View goodMorning = findText(activity.getWindow().getDecorView(), "Good Morning");
