@@ -36,6 +36,15 @@ public class MainActivity extends Activity {
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
         db = new DBHelper(this);
+        try { db.getWritableDatabase(); }
+        catch (Exception e) {
+            try {
+                db.close();
+                deleteDatabase("property_return_filer.db");
+                db = new DBHelper(this);
+                db.getWritableDatabase();
+            } catch (Exception ignored) {}
+        }
         if (android.os.Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 100);
@@ -207,7 +216,7 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams gp = new LinearLayout.LayoutParams(-1,dp(54));
         gp.setMargins(0,dp(26),0,0);
         panel.addView(get,gp);
-        get.setOnClickListener(v->showDashboard());
+        get.setOnClickListener(v->openDashboardSafe());
 
         TextView foot=tv("Built for Tax Professionals in Pakistan",11,MUTED,false);
         foot.setGravity(Gravity.CENTER);
@@ -295,6 +304,22 @@ public class MainActivity extends Activity {
         item.addView(l);
         item.setOnClickListener(v->run.run());
         nav.addView(item,new LinearLayout.LayoutParams(0,dp(52),1));
+    }
+
+    private void openDashboardSafe(){
+        try {
+            showDashboard();
+        } catch (Exception e) {
+            try {
+                db.close();
+                deleteDatabase("property_return_filer.db");
+                db = new DBHelper(this);
+                db.getWritableDatabase();
+                showDashboard();
+            } catch (Exception second) {
+                toast("App data initialize nahi ho saka. App dobara open karein.");
+            }
+        }
     }
 
     private void showDashboard(){
