@@ -307,19 +307,7 @@ public class MainActivity extends Activity {
     }
 
     private void openDashboardSafe(){
-        try {
-            showDashboard();
-        } catch (Exception e) {
-            try {
-                db.close();
-                deleteDatabase("property_return_filer.db");
-                db = new DBHelper(this);
-                db.getWritableDatabase();
-                showDashboard();
-            } catch (Exception second) {
-                toast("App data initialize nahi ho saka. App dobara open karein.");
-            }
-        }
+        showDashboard();
     }
 
     private void showDashboard(){
