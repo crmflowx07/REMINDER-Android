@@ -68,4 +68,4 @@ jobs:
               adb logcat -d -v time
               exit 1
             fi
-            echo "Runtime QA passed: launch -> Get Started -> dashboard"
+            echo "Runtime QA passed: launch -> Get Started -> dashboard verified"
