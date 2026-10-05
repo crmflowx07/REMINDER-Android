@@ -36,7 +36,7 @@ public class MainActivityFlowTest {
         TextView getStarted=findText(root,"Get Started");
         assertNotNull("Get Started button must exist", getStarted);
         assertTrue("Get Started must be clickable", getStarted.isClickable());
-        getStarted.performClick();
+        assertTrue("Get Started listener must execute", getStarted.callOnClick());
         Shadows.shadowOf(Looper.getMainLooper()).idle();
 
         View dashboard=activity.getWindow().getDecorView();
