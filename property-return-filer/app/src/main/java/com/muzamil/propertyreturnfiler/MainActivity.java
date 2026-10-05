@@ -122,10 +122,29 @@ public class MainActivity extends Activity {
     }
 
     private TextView avatar(String name, int size){
-        TextView a = tv(initials(name), size/3, Color.WHITE, true);
+        TextView a = tv("", size/3, Color.WHITE, true);
         a.setGravity(Gravity.CENTER);
-        a.setBackground(gradient(Color.rgb(70,165,255),Color.rgb(35,98,238),size/2));
+        int res = avatarRes(name);
+        if(res!=0){
+            a.setBackgroundResource(res);
+        } else {
+            a.setText(initials(name));
+            a.setBackground(gradient(Color.rgb(70,165,255),Color.rgb(35,98,238),size/2));
+        }
         return a;
+    }
+
+    private int avatarRes(String name){
+        if(name==null) return 0;
+        String n=name.toLowerCase(Locale.US);
+        if(n.contains("muzamil") || n.contains("ahmed raza") || n.contains("ali enterprises")) return R.drawable.avatar_ar;
+        if(n.contains("sana khan")) return R.drawable.avatar_sk;
+        if(n.contains("ayesha malik")) return R.drawable.avatar_am;
+        if(n.contains("faisal ahmed")) return R.drawable.avatar_fa;
+        if(n.contains("usman sheikh")) return R.drawable.avatar_us;
+        if(n.contains("mubeen")) return R.drawable.avatar_mt;
+        if(n.contains("zahid")) return R.drawable.avatar_zh;
+        return 0;
     }
 
     private String initials(String s){
@@ -139,7 +158,9 @@ public class MainActivity extends Activity {
         FrameLayout frame = new FrameLayout(this);
         frame.setBackgroundColor(Color.WHITE);
 
-        FbrBuildingView art = new FbrBuildingView(this);
+        ImageView art = new ImageView(this);
+        art.setImageResource(R.drawable.bg_fbr_building);
+        art.setScaleType(ImageView.ScaleType.FIT_XY);
         FrameLayout.LayoutParams artP = new FrameLayout.LayoutParams(-1,dp(320));
         artP.gravity = Gravity.TOP;
         frame.addView(art,artP);
@@ -254,7 +275,7 @@ public class MainActivity extends Activity {
         addNav(nav,"Clients",R.drawable.ic_people,"clients",()->showClients(""));
         addNav(nav,"Reminders",R.drawable.ic_bell,"reminders",()->showReminders());
         addNav(nav,"Reports",R.drawable.ic_grid,"reports",()->showReports());
-        addNav(nav,"More",R.drawable.ic_settings,"more",()->showMore());
+        addNav(nav,"More",R.drawable.ic_more,"more",()->showMore());
         return nav;
     }
 
@@ -342,7 +363,7 @@ public class MainActivity extends Activity {
         Space q3=new Space(this);quick2.addView(q3,new LinearLayout.LayoutParams(dp(8),1));
         quick2.addView(quick("Reports",R.drawable.ic_grid,()->showReports()),new LinearLayout.LayoutParams(0,dp(82),1));
         Space q4=new Space(this);quick2.addView(q4,new LinearLayout.LayoutParams(dp(8),1));
-        quick2.addView(quick("FBR Portal",R.drawable.ic_settings,()->openUrl("https://iris.fbr.gov.pk/")),new LinearLayout.LayoutParams(0,dp(82),1));
+        quick2.addView(quick("FBR Portal",R.drawable.ic_fbr_portal,()->openUrl("https://iris.fbr.gov.pk/")),new LinearLayout.LayoutParams(0,dp(82),1));
         body.addView(quick2);
     }
 
@@ -368,26 +389,42 @@ public class MainActivity extends Activity {
 
     private void showClients(String q){
         activeNav="clients";
-        shell("Clients","24/7 growing business");
+        root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(BG);root.setPadding(dp(12),dp(10),dp(12),dp(8));
 
+        LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout labels=new LinearLayout(this);labels.setOrientation(LinearLayout.VERTICAL);
+        labels.addView(tv("Clients",25,INK,true));labels.addView(tv("24/7 growing business",11,MUTED,false));
+        top.addView(labels,new LinearLayout.LayoutParams(0,-2,1));
+        TextView plusTop=tv("+",28,Color.WHITE,false);plusTop.setGravity(Gravity.CENTER);plusTop.setBackground(gradient(BLUE2,BLUE,25));plusTop.setOnClickListener(v->clientForm(null));
+        top.addView(plusTop,new LinearLayout.LayoutParams(dp(44),dp(44)));
+        root.addView(top);
+
+        LinearLayout searchRow=new LinearLayout(this);searchRow.setGravity(Gravity.CENTER_VERTICAL);
         EditText search=new EditText(this);
         search.setHint("Search by name, NTN or number...");
-        search.setText(q);
-        search.setSingleLine(true);
-        search.setTextSize(12);
-        search.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_search,0,0,0);
-        search.setCompoundDrawablePadding(dp(8));
-        search.setPadding(dp(12),0,dp(12),0);
-        search.setBackground(solid(Color.rgb(240,244,251),18));
-        body.addView(search,new LinearLayout.LayoutParams(-1,dp(48)));
+        search.setText(q);search.setSingleLine(true);search.setTextSize(12);
+        search.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_search,0,0,0);search.setCompoundDrawablePadding(dp(8));
+        search.setPadding(dp(12),0,dp(12),0);search.setBackground(solid(Color.rgb(240,244,251),18));
+        searchRow.addView(search,new LinearLayout.LayoutParams(0,dp(48),1));
+        Space srGap=new Space(this);searchRow.addView(srGap,new LinearLayout.LayoutParams(dp(8),1));
+        TextView filter=iconCircle(R.drawable.ic_filter);filter.setBackground(solid(Color.WHITE,18));searchRow.addView(filter,new LinearLayout.LayoutParams(dp(48),dp(48)));
+        LinearLayout.LayoutParams srp=new LinearLayout.LayoutParams(-1,dp(48));srp.setMargins(0,dp(10),0,0);root.addView(searchRow,srp);
 
         LinearLayout tabs=new LinearLayout(this);tabs.setGravity(Gravity.CENTER_VERTICAL);
-        tabs.addView(chip("All (48)",true)); tabs.addView(chip("Active (36)",false)); tabs.addView(chip("Pending (12)",false)); tabs.addView(chip("Filed (28)",false));
-        LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(-1,dp(40));tp.setMargins(0,dp(7),0,dp(8));body.addView(tabs,tp);
+        tabs.addView(chip("All (48)",true));tabs.addView(chip("Active (36)",false));tabs.addView(chip("Pending (12)",false));tabs.addView(chip("Filed (28)",false));
+        LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(-1,dp(40));tp.setMargins(0,dp(7),0,dp(4));root.addView(tabs,tp);
 
-        LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);body.addView(list);
+        FrameLayout contentFrame=new FrameLayout(this);
+        ScrollView sv=new ScrollView(this);LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);list.setPadding(0,dp(4),0,dp(78));sv.addView(list);contentFrame.addView(sv,new FrameLayout.LayoutParams(-1,-1));
+        TextView floating=tv("+",34,Color.WHITE,false);floating.setGravity(Gravity.CENTER);floating.setBackground(gradient(BLUE2,BLUE,30));floating.setElevation(dp(8));floating.setOnClickListener(v->clientForm(null));
+        FrameLayout.LayoutParams fp=new FrameLayout.LayoutParams(dp(58),dp(58),Gravity.BOTTOM|Gravity.RIGHT);fp.setMargins(0,0,dp(8),dp(12));contentFrame.addView(floating,fp);
+        root.addView(contentFrame,new LinearLayout.LayoutParams(-1,0,1));
+        root.addView(bottomNav());
+        setContentView(root);
+
         renderClients(list,q);
         search.setOnEditorActionListener((v,a,e)->{renderClients(list,search.getText().toString());return true;});
+        filter.setOnClickListener(v->toast("Filters: Active, Pending, Filed"));
     }
 
     private View chip(String label,boolean on){
@@ -417,7 +454,7 @@ public class MainActivity extends Activity {
         int sc="Active".equals(status)?BLUE:("Filed".equals(status)?GREEN:ORANGE);
         TextView badge=tv(status,9,sc,true);badge.setGravity(Gravity.CENTER);badge.setBackground(solid(statusBg(status),13));
         row.addView(badge,new LinearLayout.LayoutParams(dp(60),dp(26)));
-        TextView more=tv("⋮",24,MUTED,false);more.setGravity(Gravity.CENTER);row.addView(more,new LinearLayout.LayoutParams(dp(28),dp(38)));
+        TextView more=iconCircle(R.drawable.ic_more);more.setBackgroundColor(Color.TRANSPARENT);more.setElevation(0);row.addView(more,new LinearLayout.LayoutParams(dp(28),dp(38)));
         row.setOnClickListener(v->showClient(c.id));
         return row;
     }
@@ -430,7 +467,7 @@ public class MainActivity extends Activity {
         LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
         TextView back=tv("‹",31,INK,false);back.setGravity(Gravity.CENTER);back.setOnClickListener(v->showClients(""));top.addView(back,new LinearLayout.LayoutParams(dp(42),dp(42)));
         TextView title=tv("Profile",15,INK,false);top.addView(title,new LinearLayout.LayoutParams(0,-2,1));
-        TextView dots=tv("⋮",24,INK,false);dots.setGravity(Gravity.CENTER);dots.setOnClickListener(v->clientForm(c));top.addView(dots,new LinearLayout.LayoutParams(dp(42),dp(42)));
+        TextView dots=iconCircle(R.drawable.ic_more);dots.setBackgroundColor(Color.TRANSPARENT);dots.setElevation(0);dots.setOnClickListener(v->clientForm(c));top.addView(dots,new LinearLayout.LayoutParams(dp(42),dp(42)));
         root.addView(top);
 
         ScrollView sv=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(0,dp(4),0,dp(76));sv.addView(body);root.addView(sv,new LinearLayout.LayoutParams(-1,0,1));root.addView(bottomNav());
@@ -470,7 +507,7 @@ public class MainActivity extends Activity {
         LinearLayout c=card(15);c.setOrientation(LinearLayout.HORIZONTAL);c.setGravity(Gravity.CENTER_VERTICAL);c.setPadding(dp(12),dp(11),dp(12),dp(11));
         TextView ic=iconCircle(icon);ic.setBackground(solid(Color.rgb(239,244,251),14));c.addView(ic,new LinearLayout.LayoutParams(dp(40),dp(40)));
         LinearLayout tx=new LinearLayout(this);tx.setOrientation(LinearLayout.VERTICAL);tx.setPadding(dp(10),0,0,0);tx.addView(tv(label,10,MUTED,false));tx.addView(tv(value,13,INK,true));c.addView(tx,new LinearLayout.LayoutParams(0,-2,1));
-        if(contact){TextView call=iconCircle(android.R.drawable.ic_menu_call);c.addView(call,new LinearLayout.LayoutParams(dp(38),dp(38)));TextView mail=iconCircle(android.R.drawable.ic_dialog_email);c.addView(mail,new LinearLayout.LayoutParams(dp(38),dp(38)));}
+        if(contact){TextView call=iconCircle(R.drawable.ic_phone);c.addView(call,new LinearLayout.LayoutParams(dp(38),dp(38)));TextView mail=iconCircle(R.drawable.ic_mail);c.addView(mail,new LinearLayout.LayoutParams(dp(38),dp(38)));}
         else {TextView go=tv("›",23,MUTED,false);go.setGravity(Gravity.CENTER);c.addView(go,new LinearLayout.LayoutParams(dp(30),dp(38)));}
         return c;
     }
@@ -507,7 +544,7 @@ public class MainActivity extends Activity {
             LinearLayout tx=new LinearLayout(this);tx.setOrientation(LinearLayout.VERTICAL);tx.setPadding(dp(9),0,0,0);tx.addView(tv(r[0],13,INK,true));tx.addView(tv(r[1],10,MUTED,false));TextView date=iconText(r[2],R.drawable.ic_calendar,10,RED,true);tx.addView(date);c.addView(tx,new LinearLayout.LayoutParams(0,-2,1));
             int col=r[3].contains("Overdue")?RED:(r[3].contains("Pending")?ORANGE:BLUE);
             TextView badge=tv(r[3],9,col,true);badge.setGravity(Gravity.CENTER);badge.setBackground(solid(statusBg(r[3]),13));c.addView(badge,new LinearLayout.LayoutParams(dp(76),dp(28)));
-            TextView more=tv("⋮",20,MUTED,false);more.setGravity(Gravity.CENTER);c.addView(more,new LinearLayout.LayoutParams(dp(24),dp(32)));
+            TextView more=iconCircle(R.drawable.ic_more);more.setBackgroundColor(Color.TRANSPARENT);more.setElevation(0);c.addView(more,new LinearLayout.LayoutParams(dp(24),dp(32)));
             body.addView(c);
         }
     }
@@ -523,7 +560,7 @@ public class MainActivity extends Activity {
 
     private void showMore(){
         activeNav="more";shell("More","Settings and tools");
-        body.addView(menuRow("FBR Portal",R.drawable.ic_doc,()->openUrl("https://iris.fbr.gov.pk/")));
+        body.addView(menuRow("FBR Portal",R.drawable.ic_fbr_portal,()->openUrl("https://iris.fbr.gov.pk/")));
         body.addView(menuRow("Client Database",R.drawable.ic_people,()->showClients("")));
         body.addView(menuRow("Reminder Settings",R.drawable.ic_bell,()->showReminders()));
         body.addView(menuRow("Reports",R.drawable.ic_grid,()->showReports()));
