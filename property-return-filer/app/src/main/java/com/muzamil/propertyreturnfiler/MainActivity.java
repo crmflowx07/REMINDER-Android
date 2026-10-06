@@ -616,7 +616,7 @@ public class MainActivity extends Activity {
         ft.setOnClickListener(v->showClientFilings(id));
         rt.setOnClickListener(v->showClientReminders(id));
         nt.setOnClickListener(v->showClientNotes(id));
-        tabs.addView(ov);tabs.addView(ft);tabs.addView(rt);tabs.addView(nt);
+        tabs.addView(ov,new LinearLayout.LayoutParams(0,-1,1));tabs.addView(ft,new LinearLayout.LayoutParams(0,-1,1));tabs.addView(rt,new LinearLayout.LayoutParams(0,-1,1));tabs.addView(nt,new LinearLayout.LayoutParams(0,-1,1));
         LinearLayout.LayoutParams tabp=new LinearLayout.LayoutParams(-1,dp(44));tabp.setMargins(0,dp(8),0,dp(8));body.addView(tabs,tabp);
 
         body.addView(infoCard("WhatsApp Number",safe(c.whatsapp),R.drawable.ic_chat,true));
@@ -945,7 +945,33 @@ public class MainActivity extends Activity {
         body.addView(spacer(12));
         body.addView(emptyState("Safe restore","Restore replaces current local ERP records with the selected FBR Return Filer backup."));
     }
-    private void showSettingsInfo(){activeNav="more";shell("Settings","FBR Return Filer preferences");body.addView(infoCard("App","FBR Return Filer Pro",R.drawable.ic_settings,false));body.addView(infoCard("Storage","Private SQLite on device",R.drawable.ic_doc,false));body.addView(infoCard("Reminder channel","Local notification + WhatsApp",R.drawable.ic_bell,false));}
+    private void showSettingsInfo(){
+        activeNav="more";shell("Settings","FBR Return Filer preferences");
+        body.addView(infoCard("App","FBR Return Filer Pro V12",R.drawable.ic_settings,false));
+        body.addView(infoCard("Storage","Private SQLite + JSON backup",R.drawable.ic_doc,false));
+        body.addView(infoCard("Reminder channel","Local notification + WhatsApp",R.drawable.ic_bell,false));
+
+        body.addView(section("System Readiness"));
+        LinearLayout diag=card(18);
+        boolean notificationReady=android.os.Build.VERSION.SDK_INT<33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED;
+        AlarmManager am=(AlarmManager)getSystemService(ALARM_SERVICE);
+        boolean exactReady=android.os.Build.VERSION.SDK_INT<31 || (am!=null && am.canScheduleExactAlarms());
+        diag.addView(infoLineReport("Notifications",notificationReady?"Allowed":"Permission needed",notificationReady?GREEN:ORANGE));
+        diag.addView(infoLineReport("Exact alarms",exactReady?"Allowed":"Using fallback",exactReady?GREEN:ORANGE));
+        diag.addView(infoLineReport("Database",db.countClients()+" clients loaded",BLUE));
+        body.addView(diag);
+
+        if(!notificationReady && android.os.Build.VERSION.SDK_INT>=33){
+            Button n=actionButton("Allow Notifications",R.drawable.ic_bell,true);
+            n.setOnClickListener(v->requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},100));
+            body.addView(n,new LinearLayout.LayoutParams(-1,dp(50)));body.addView(spacer(8));
+        }
+        if(!exactReady && android.os.Build.VERSION.SDK_INT>=31){
+            Button e=actionButton("Open Exact Alarm Permission",R.drawable.ic_calendar,false);
+            e.setOnClickListener(v->{try{Intent i=new Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:"+getPackageName()));startActivity(i);}catch(Exception ex){toast("Settings open nahi ho saki");}});
+            body.addView(e,new LinearLayout.LayoutParams(-1,dp(50)));
+        }
+    }
 
     private void clientForm(DBHelper.Client c){
         boolean edit=c!=null;
@@ -990,19 +1016,33 @@ public class MainActivity extends Activity {
 
     private void reminderForm(long clientId){
         LinearLayout f=new LinearLayout(this);f.setOrientation(LinearLayout.VERTICAL);f.setPadding(dp(18),dp(8),dp(18),dp(8));
+
+        List<DBHelper.Client> clientChoices=db.clients("");
+        ArrayList<String> labels=new ArrayList<>();labels.add("General Reminder");
+        int selectedClient=0;
+        for(int i=0;i<clientChoices.size();i++){
+            DBHelper.Client cc=clientChoices.get(i);
+            labels.add(cc.name+" • "+safe(cc.ntn));
+            if(cc.id==clientId)selectedClient=i+1;
+        }
+        TextView clientLabel=tv("Client",11,MUTED,true);clientLabel.setPadding(0,dp(4),0,dp(4));f.addView(clientLabel);
+        Spinner clientSpinner=new Spinner(this);
+        clientSpinner.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labels));
+        clientSpinner.setSelection(selectedClient);f.addView(clientSpinner,new LinearLayout.LayoutParams(-1,dp(50)));
+
         EditText title=field(f,"Reminder title","FBR Return Reminder");
         EditText msg=field(f,"Message","Kindly apne required FBR return documents provide kar dein.");
         EditText mins=field(f,"Remind after minutes","10");mins.setInputType(InputType.TYPE_CLASS_NUMBER);
-        TextView repeatLabel=tv("Repeat",11,MUTED,true);repeatLabel.setPadding(0,dp(4),0,dp(5));f.addView(repeatLabel);
-        Spinner repeat=new Spinner(this);
-        ArrayAdapter<String> adapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Once","Monthly"});
-        repeat.setAdapter(adapter);repeat.setSelection(1);
-        f.addView(repeat,new LinearLayout.LayoutParams(-1,dp(50)));
+        Spinner repeat=dropdown(f,"Repeat",new String[]{"Once","Monthly"},"Monthly");
+
         new AlertDialog.Builder(this).setTitle("Schedule Reminder").setView(f).setNegativeButton("Cancel",null).setPositiveButton("Schedule",(d,w)->{
             int m=10;try{m=Math.max(1,Integer.parseInt(val(mins)));}catch(Exception ignored){}
+            long targetClient=0;
+            int pos=clientSpinner.getSelectedItemPosition();
+            if(pos>0 && pos-1<clientChoices.size())targetClient=clientChoices.get(pos-1).id;
             long at=System.currentTimeMillis()+m*60000L;
             String rule=String.valueOf(repeat.getSelectedItem());
-            long rid=db.addReminder(clientId,val(title),val(msg),at,rule,"Local + WhatsApp");
+            long rid=db.addReminder(targetClient,val(title),val(msg),at,rule,"Local + WhatsApp");
             ReminderScheduler.schedule(this,rid,val(title),val(msg),at,rule);
             toast("Reminder scheduled");
             showReminders();
