@@ -2,10 +2,10 @@ package com.muzamil.propertyreturnfiler;
 
 import static org.junit.Assert.*;
 import android.content.Context;
-import androidx.test.core.app.ApplicationProvider;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 
 @RunWith(RobolectricTestRunner.class)
@@ -14,7 +14,7 @@ public class BackupAndReminderTest {
     private Context context;
 
     @Before public void setup(){
-        context=ApplicationProvider.getApplicationContext();
+        context=RuntimeEnvironment.getApplication();
         context.deleteDatabase("property_return_filer.db");
     }
 
