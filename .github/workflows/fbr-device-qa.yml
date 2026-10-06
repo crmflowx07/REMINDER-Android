@@ -69,5 +69,5 @@ jobs:
             echo "DEVICE QA PASS: Get Started opens dashboard"
       - uses: actions/upload-artifact@v4
         with:
-          name: FBR-Return-Filer-V7-Device-Tested-APK
+          name: FBR-Return-Filer-V8-Device-Tested-APK
           path: property-return-filer/app/build/outputs/apk/debug/app-debug.apk
