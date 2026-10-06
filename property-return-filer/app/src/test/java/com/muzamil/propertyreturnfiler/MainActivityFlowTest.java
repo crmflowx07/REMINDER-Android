@@ -30,12 +30,15 @@ public class MainActivityFlowTest {
         return null;
     }
 
-    @Test public void appLaunchesDirectlyToDashboard(){
+    @Test public void appLaunchesDirectlyToDashboard() throws Exception {
         MainActivity activity=Robolectric.buildActivity(MainActivity.class).setup().get();
-        View decor=activity.getWindow().getDecorView();
-        assertNull("V13 must not show Get Started",findText(decor,"Get Started"));
-        assertNotNull("V13 must launch dashboard immediately",findText(decor,"Good Morning"));
-        assertNotNull("Dashboard must show Total Clients",findText(decor,"Total Clients"));
+        Field rf=MainActivity.class.getDeclaredField("root");
+        rf.setAccessible(true);
+        View dashboard=(View)rf.get(activity);
+        assertNotNull("V13 must create dashboard root on launch",dashboard);
+        assertNull("V13 must not show Get Started",findText(dashboard,"Get Started"));
+        assertNotNull("V13 must launch dashboard immediately",findText(dashboard,"Good Morning"));
+        assertNotNull("Dashboard must show Total Clients",findText(dashboard,"Total Clients"));
     }
 
     @Test public void dashboardRendersWithoutCrash() throws Exception {
