@@ -411,15 +411,15 @@ public class MainActivity extends Activity {
         hero.addView(hr);body.addView(hero);
 
         LinearLayout r1=new LinearLayout(this);
-        r1.addView(metric("Pending Returns","12","Due this month",R.drawable.ic_doc,RED,Color.rgb(255,236,238)),new LinearLayout.LayoutParams(0,dp(112),1));
+        r1.addView(metric("Pending Returns",String.valueOf(db.countPending()),"Due this month",R.drawable.ic_doc,RED,Color.rgb(255,236,238)),new LinearLayout.LayoutParams(0,dp(112),1));
         Space a=new Space(this);r1.addView(a,new LinearLayout.LayoutParams(dp(10),1));
-        r1.addView(metric("Reminders Today","5","Action needed",R.drawable.ic_bell,ORANGE,Color.rgb(255,243,225)),new LinearLayout.LayoutParams(0,dp(112),1));
+        r1.addView(metric("Reminders Today",String.valueOf(db.countReminders()),"Action needed",R.drawable.ic_bell,ORANGE,Color.rgb(255,243,225)),new LinearLayout.LayoutParams(0,dp(112),1));
         body.addView(r1);
 
         LinearLayout r2=new LinearLayout(this);
-        r2.addView(metric("Filed This Month","28","Successfully filed",R.drawable.ic_doc,GREEN,Color.rgb(228,249,238)),new LinearLayout.LayoutParams(0,dp(112),1));
+        r2.addView(metric("Filed This Month",String.valueOf(db.countFiled()),"Successfully filed",R.drawable.ic_doc,GREEN,Color.rgb(228,249,238)),new LinearLayout.LayoutParams(0,dp(112),1));
         Space b=new Space(this);r2.addView(b,new LinearLayout.LayoutParams(dp(10),1));
-        r2.addView(metric("Total Revenue","PKR 125,000","This month",R.drawable.ic_payment,PURPLE,Color.rgb(244,235,255)),new LinearLayout.LayoutParams(0,dp(112),1));
+        r2.addView(metric("Total Revenue","PKR "+String.format(Locale.US,"%,.0f",db.totalPayments()),"Recorded fees",R.drawable.ic_payment,PURPLE,Color.rgb(244,235,255)),new LinearLayout.LayoutParams(0,dp(112),1));
         body.addView(r2);
 
         LinearLayout qh=new LinearLayout(this);qh.setGravity(Gravity.CENTER_VERTICAL);qh.addView(section("Quick Actions"),new LinearLayout.LayoutParams(0,-2,1));TextView view=tv("View All",11,BLUE,false);qh.addView(view);body.addView(qh);
@@ -543,7 +543,7 @@ public class MainActivity extends Activity {
 
         renderClients(list,q);
         search.setOnEditorActionListener((v,a,e)->{renderClients(list,search.getText().toString());return true;});
-        filter.setOnClickListener(v->toast("Filters: Active, Pending, Filed"));
+        filter.setOnClickListener(v->showClientFilterDialog(list));
     }
 
     private View chip(String label,boolean on){
@@ -687,11 +687,65 @@ public class MainActivity extends Activity {
 
     private void showReports(){
         activeNav="reports";shell("Reports","Insights for a better business");
-        LinearLayout hero=card(20);hero.setBackground(gradient(Color.rgb(41,147,255),Color.rgb(14,98,235),20));hero.addView(tv("Monthly Compliance",13,Color.WHITE,false));hero.addView(tv("92%",36,Color.WHITE,true));hero.addView(tv("Returns filed on time",11,0xFFEAF4FF,false));body.addView(hero);
-        body.addView(metric("Active Clients",String.valueOf(Math.max(48,db.countClients())),"Portfolio",R.drawable.ic_people,BLUE,Color.rgb(232,244,255)));
-        body.addView(metric("Returns Filed","28","This month",R.drawable.ic_doc,GREEN,Color.rgb(228,249,238)));
-        body.addView(metric("Pending Returns","12","Needs attention",R.drawable.ic_bell,ORANGE,Color.rgb(255,243,225)));
-        body.addView(metric("Revenue","PKR 125,000","This month",R.drawable.ic_payment,PURPLE,Color.rgb(244,235,255)));
+        int totalReturns=Math.max(1,db.countFiled()+db.countPending());
+        int compliance=(int)Math.round(db.countFiled()*100.0/totalReturns);
+        LinearLayout hero=card(20);hero.setBackground(gradient(Color.rgb(41,147,255),Color.rgb(14,98,235),20));
+        hero.addView(tv("Overall Compliance",13,Color.WHITE,false));hero.addView(tv(compliance+"%",36,Color.WHITE,true));hero.addView(tv("Filed vs pending returns",11,0xFFEAF4FF,false));body.addView(hero);
+
+        LinearLayout row=new LinearLayout(this);
+        row.addView(metric("Clients",String.valueOf(db.countClients()),db.countActiveClients()+" active",R.drawable.ic_people,BLUE,Color.rgb(232,244,255)),new LinearLayout.LayoutParams(0,dp(112),1));
+        Space rs=new Space(this);row.addView(rs,new LinearLayout.LayoutParams(dp(8),1));
+        row.addView(metric("Documents",String.valueOf(db.countDocuments()),"Tracked records",R.drawable.ic_doc,PURPLE,Color.rgb(244,235,255)),new LinearLayout.LayoutParams(0,dp(112),1));
+        body.addView(row);
+
+        body.addView(section("Financial Summary"));
+        LinearLayout finance=card(18);
+        finance.addView(infoLineReport("Total recorded fees","PKR "+String.format(Locale.US,"%,.0f",db.totalPayments()),BLUE));
+        finance.addView(infoLineReport("Paid fees","PKR "+String.format(Locale.US,"%,.0f",db.paidPayments()),GREEN));
+        finance.addView(infoLineReport("Pending payment records",String.valueOf(db.countPendingPayments()),ORANGE));
+        body.addView(finance);
+
+        body.addView(section("Return Performance"));
+        LinearLayout perf=card(18);
+        perf.addView(progressLine("Filed",db.countFiled(),totalReturns,GREEN));perf.addView(spacer(10));
+        perf.addView(progressLine("Pending",db.countPending(),totalReturns,ORANGE));perf.addView(spacer(10));
+        perf.addView(progressLine("Reminder coverage",db.countReminders(),Math.max(1,db.countClients()),BLUE));
+        body.addView(perf);
+
+        Button share=actionButton("Share Summary",R.drawable.ic_doc,true);share.setOnClickListener(v->shareBusinessSummary());
+        body.addView(share,new LinearLayout.LayoutParams(-1,dp(52)));
+    }
+
+    private View infoLineReport(String label,String value,int color){
+        LinearLayout r=new LinearLayout(this);r.setGravity(Gravity.CENTER_VERTICAL);r.setPadding(0,dp(6),0,dp(6));
+        r.addView(tv(label,12,MUTED,false),new LinearLayout.LayoutParams(0,-2,1));r.addView(tv(value,13,color,true));return r;
+    }
+
+    private void showClientFilterDialog(LinearLayout list){
+        String[] items={"All Clients","Active","Pending","Filed"};
+        new AlertDialog.Builder(this).setTitle("Filter Clients").setItems(items,(d,which)->{
+            list.removeAllViews();
+            List<DBHelper.Client> data;
+            if(which==1)data=db.clientsByStatus("Active");
+            else if(which==2)data=db.clientsByStatus("Pending");
+            else if(which==3)data=db.clientsByStatus("Filed");
+            else data=db.clients("");
+            if(data.isEmpty())list.addView(emptyState("No clients","No clients match this filter."));
+            else for(DBHelper.Client cl:data)list.addView(clientRow(cl));
+        }).show();
+    }
+
+    private void shareBusinessSummary(){
+        String s="FBR Return Filer Summary\n"+
+                "Clients: "+db.countClients()+"\n"+
+                "Filed Returns: "+db.countFiled()+"\n"+
+                "Pending Returns: "+db.countPending()+"\n"+
+                "Reminders: "+db.countReminders()+"\n"+
+                "Documents: "+db.countDocuments()+"\n"+
+                "Total Fees: PKR "+String.format(Locale.US,"%,.0f",db.totalPayments())+"\n"+
+                "Paid Fees: PKR "+String.format(Locale.US,"%,.0f",db.paidPayments());
+        Intent send=new Intent(Intent.ACTION_SEND);send.setType("text/plain");send.putExtra(Intent.EXTRA_SUBJECT,"FBR Return Filer Summary");send.putExtra(Intent.EXTRA_TEXT,s);
+        startActivity(Intent.createChooser(send,"Share report"));
     }
 
     private void showMore(){
@@ -708,9 +762,20 @@ public class MainActivity extends Activity {
         body.addView(menuRow("Documents Checklist",R.drawable.ic_doc,()->showDocumentsHub()));
         body.addView(menuRow("Payments & Fees",R.drawable.ic_payment,()->showPaymentsHub()));
         body.addView(menuRow("Reports & Compliance",R.drawable.ic_grid,()->showReports()));
+        body.addView(menuRow("Action Center",R.drawable.ic_bell,()->showActionCenter()));
         body.addView(section("System"));
         body.addView(menuRow("Backup & Restore",R.drawable.ic_settings,()->showBackupInfo()));
         body.addView(menuRow("App Settings",R.drawable.ic_settings,()->showSettingsInfo()));
+    }
+
+    private void showActionCenter(){
+        activeNav="more";shell("Action Center","What needs attention now");
+        body.addView(section("Pending Clients"));
+        List<DBHelper.Client> pending=db.clientsByStatus("Pending");
+        if(pending.isEmpty())body.addView(emptyState("All clear","No pending clients."));
+        for(DBHelper.Client cl:pending){LinearLayout x=card(16);x.addView(tv(cl.name,13,INK,true));x.addView(tv(safe(cl.taxType)+" • Due "+safe(cl.nextDue),10,MUTED,false));x.setOnClickListener(v->showClient(cl.id));body.addView(x);}
+        body.addView(section("Scheduled Reminders"));
+        for(DBHelper.Reminder rr:db.reminders(0)){LinearLayout x=card(16);x.addView(tv(rr.title,13,INK,true));x.addView(tv((rr.client==null?"General":rr.client)+" • "+rr.repeat,10,MUTED,false));body.addView(x);}
     }
 
     private View menuRow(String title,int icon,Runnable r){
