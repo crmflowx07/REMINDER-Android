@@ -111,6 +111,25 @@ public class DBHelper extends SQLiteOpenHelper {
     public int countPending(){return scalar("SELECT COUNT(*) FROM filings WHERE status='Pending'");}
     public int countFiled(){return scalar("SELECT COUNT(*) FROM filings WHERE status='Filed' OR status='Completed'");}
     public int countReminders(){return scalar("SELECT COUNT(*) FROM reminders WHERE status='Scheduled'");}
+    public int countActiveClients(){return scalar("SELECT COUNT(*) FROM clients WHERE status='Active'");}
+    public int countFiledClients(){return scalar("SELECT COUNT(*) FROM clients WHERE status='Filed'");}
+    public int countPendingClients(){return scalar("SELECT COUNT(*) FROM clients WHERE status='Pending'");}
+    public int countDocuments(){return scalar("SELECT COUNT(*) FROM documents");}
+    public int countPayments(){return scalar("SELECT COUNT(*) FROM payments");}
+    public int countPendingPayments(){return scalar("SELECT COUNT(*) FROM payments WHERE status!='Paid'");}
+    public double totalPayments(){
+        Cursor c=getReadableDatabase().rawQuery("SELECT COALESCE(SUM(amount),0) FROM payments",null);
+        c.moveToFirst();double v=c.getDouble(0);c.close();return v;
+    }
+    public double paidPayments(){
+        Cursor c=getReadableDatabase().rawQuery("SELECT COALESCE(SUM(amount),0) FROM payments WHERE status='Paid'",null);
+        c.moveToFirst();double v=c.getDouble(0);c.close();return v;
+    }
+    public List<Client> clientsByStatus(String status){
+        ArrayList<Client> out=new ArrayList<>();
+        Cursor c=getReadableDatabase().rawQuery("SELECT id,name,whatsapp,phone,cnic,ntn,business,taxType,status,nextDue,email,address,notes FROM clients WHERE status=? ORDER BY id ASC",new String[]{status});
+        while(c.moveToNext())out.add(fromClient(c));c.close();return out;
+    }
 
     public long addFiling(long clientId,String month,int year,String type,String due,String status,String notes){ContentValues v=new ContentValues();v.put("clientId",clientId);v.put("month",month);v.put("year",year);v.put("type",type);v.put("dueDate",due);v.put("status",status);v.put("notes",notes);return getWritableDatabase().insert("filings",null,v);}
     public void setFilingStatus(long id,String status){ContentValues v=new ContentValues();v.put("status",status);if("Filed".equals(status)||"Completed".equals(status))v.put("filedDate",new java.text.SimpleDateFormat("dd MMM yyyy",Locale.US).format(new Date()));getWritableDatabase().update("filings",v,"id=?",new String[]{""+id});}
