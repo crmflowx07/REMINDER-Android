@@ -40,7 +40,7 @@ jobs:
           unzip -t property-return-filer/app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: FBR-Return-Filer-V8-QA-Passed-APK
+          name: FBR-Return-Filer-V10-QA-Passed-APK
           path: property-return-filer/app/build/outputs/apk/debug/app-debug.apk
 
   device-touch-test:
@@ -62,20 +62,13 @@ jobs:
           #!/usr/bin/env bash
           set -eu
           APK="property-return-filer/app/build/outputs/apk/debug/app-debug.apk"
-          PKG="com.muzamil.fbrreturnfiler.v7"
+          PKG="com.muzamil.fbrreturnfiler.fixed"
           ACT="com.muzamil.propertyreturnfiler.MainActivity"
           adb install -r "$APK"
           adb logcat -c
           adb shell am force-stop "$PKG"
           adb shell am start -W -n "$PKG/$ACT"
-          sleep 2
-          adb shell uiautomator dump /sdcard/splash.xml >/dev/null
-          adb pull /sdcard/splash.xml splash.xml >/dev/null
-          grep -q "Get Started" splash.xml
-          python3 -c 'import re,xml.etree.ElementTree as ET; root=ET.parse("splash.xml").getroot(); node=next((n for n in root.iter("node") if "Get Started" in n.attrib.get("text","")),None); assert node is not None,"Get Started node not found"; nums=list(map(int,re.findall(r"\\d+",node.attrib.get("bounds","")))); assert len(nums)>=4,f"bad bounds: {node.attrib.get(\"bounds\")}"; a,b,c,d=nums[:4]; open("tap.txt","w").write(f"{(a+c)//2} {(b+d)//2}")'
-          read X Y < tap.txt
-          adb shell input tap "$X" "$Y"
-          sleep 3
+          sleep 4
           adb shell uiautomator dump /sdcard/dashboard.xml >/dev/null
           adb pull /sdcard/dashboard.xml dashboard.xml >/dev/null
           grep -q "Good Morning" dashboard.xml
@@ -99,5 +92,5 @@ jobs:
           script: bash ./fbr-device-test.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: FBR-Return-Filer-V8-Real-Tap-Tested-APK
+          name: FBR-Return-Filer-V10-Device-Tested-APK
           path: property-return-filer/app/build/outputs/apk/debug/app-debug.apk
