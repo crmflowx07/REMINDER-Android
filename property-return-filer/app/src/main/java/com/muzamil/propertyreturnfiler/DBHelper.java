@@ -4,6 +4,7 @@ import android.content.*;
 import android.database.Cursor;
 import android.database.sqlite.*;
 import java.util.*;
+import org.json.*;
 
 public class DBHelper extends SQLiteOpenHelper {
     public static final int VERSION = 5;
@@ -138,11 +139,79 @@ public class DBHelper extends SQLiteOpenHelper {
     public long addReminder(long clientId,String title,String message,long at,String repeat,String channel){ContentValues v=new ContentValues();v.put("clientId",clientId);v.put("title",title);v.put("message",message);v.put("scheduledAt",at);v.put("repeatRule",repeat);v.put("status","Scheduled");v.put("channel",channel);return getWritableDatabase().insert("reminders",null,v);}
     public List<Reminder> reminders(long clientId){ArrayList<Reminder> l=new ArrayList<>();String where=clientId>0?" WHERE r.clientId="+clientId:"";Cursor c=getReadableDatabase().rawQuery("SELECT r.id,r.clientId,c.name,r.title,r.message,r.scheduledAt,r.repeatRule,r.status,r.channel FROM reminders r LEFT JOIN clients c ON c.id=r.clientId"+where+" ORDER BY r.scheduledAt ASC",null);while(c.moveToNext())l.add(new Reminder(c.getLong(0),c.getLong(1),c.getString(2),c.getString(3),c.getString(4),c.getLong(5),c.getString(6),c.getString(7),c.getString(8)));c.close();return l;}
     public void deleteReminder(long id){getWritableDatabase().delete("reminders","id=?",new String[]{""+id});}
+    public void completeReminder(long id){ContentValues v=new ContentValues();v.put("status","Completed");getWritableDatabase().update("reminders",v,"id=?",new String[]{""+id});}
+    public void moveReminder(long id,long at){ContentValues v=new ContentValues();v.put("scheduledAt",at);v.put("status","Scheduled");getWritableDatabase().update("reminders",v,"id=?",new String[]{""+id});}
 
     public long addPayment(long clientId,String title,double amount,String due,String status,String notes){ContentValues v=new ContentValues();v.put("clientId",clientId);v.put("title",title);v.put("amount",amount);v.put("dueDate",due);v.put("status",status);v.put("notes",notes);return getWritableDatabase().insert("payments",null,v);}
     public List<Payment> payments(long clientId){ArrayList<Payment> l=new ArrayList<>();Cursor c=getReadableDatabase().rawQuery("SELECT id,title,amount,dueDate,status,notes FROM payments WHERE clientId=? ORDER BY id DESC",new String[]{""+clientId});while(c.moveToNext())l.add(new Payment(c.getLong(0),c.getString(1),c.getDouble(2),c.getString(3),c.getString(4),c.getString(5)));c.close();return l;}
     public long addDocument(long clientId,String title,String category,String status,String notes){ContentValues v=new ContentValues();v.put("clientId",clientId);v.put("title",title);v.put("category",category);v.put("status",status);v.put("notes",notes);return getWritableDatabase().insert("documents",null,v);}
     public List<Document> documents(long clientId){ArrayList<Document> l=new ArrayList<>();Cursor c=getReadableDatabase().rawQuery("SELECT id,title,category,status,notes FROM documents WHERE clientId=? ORDER BY id DESC",new String[]{""+clientId});while(c.moveToNext())l.add(new Document(c.getLong(0),c.getString(1),c.getString(2),c.getString(3),c.getString(4)));c.close();return l;}
+
+    public String exportJson() throws JSONException {
+        JSONObject root=new JSONObject();
+        root.put("format","FBR_RETURN_FILER_BACKUP");
+        root.put("version",1);
+        root.put("exportedAt",System.currentTimeMillis());
+        String[] tables={"clients","filings","reminders","payments","documents"};
+        SQLiteDatabase db=getReadableDatabase();
+        for(String table:tables){
+            JSONArray arr=new JSONArray();
+            Cursor cur=db.rawQuery("SELECT * FROM "+table,null);
+            String[] cols=cur.getColumnNames();
+            while(cur.moveToNext()){
+                JSONObject row=new JSONObject();
+                for(int i=0;i<cols.length;i++){
+                    int type=cur.getType(i);
+                    if(type==Cursor.FIELD_TYPE_NULL) row.put(cols[i],JSONObject.NULL);
+                    else if(type==Cursor.FIELD_TYPE_INTEGER) row.put(cols[i],cur.getLong(i));
+                    else if(type==Cursor.FIELD_TYPE_FLOAT) row.put(cols[i],cur.getDouble(i));
+                    else row.put(cols[i],cur.getString(i));
+                }
+                arr.put(row);
+            }
+            cur.close();
+            root.put(table,arr);
+        }
+        return root.toString(2);
+    }
+
+    public void importJson(String json) throws JSONException {
+        JSONObject root=new JSONObject(json);
+        if(!"FBR_RETURN_FILER_BACKUP".equals(root.optString("format"))) throw new JSONException("Invalid backup format");
+        SQLiteDatabase db=getWritableDatabase();
+        db.beginTransaction();
+        try{
+            db.delete("documents",null,null);
+            db.delete("payments",null,null);
+            db.delete("reminders",null,null);
+            db.delete("filings",null,null);
+            db.delete("clients",null,null);
+            importTable(db,root.optJSONArray("clients"),"clients");
+            importTable(db,root.optJSONArray("filings"),"filings");
+            importTable(db,root.optJSONArray("reminders"),"reminders");
+            importTable(db,root.optJSONArray("payments"),"payments");
+            importTable(db,root.optJSONArray("documents"),"documents");
+            db.setTransactionSuccessful();
+        } finally { db.endTransaction(); }
+    }
+
+    private void importTable(SQLiteDatabase db,JSONArray arr,String table) throws JSONException {
+        if(arr==null)return;
+        for(int i=0;i<arr.length();i++){
+            JSONObject row=arr.getJSONObject(i);
+            ContentValues v=new ContentValues();
+            Iterator<String> it=row.keys();
+            while(it.hasNext()){
+                String k=it.next();
+                Object val=row.opt(k);
+                if(val==null || val==JSONObject.NULL) v.putNull(k);
+                else if(val instanceof Integer || val instanceof Long) v.put(k,((Number)val).longValue());
+                else if(val instanceof Float || val instanceof Double) v.put(k,((Number)val).doubleValue());
+                else v.put(k,String.valueOf(val));
+            }
+            db.insertOrThrow(table,null,v);
+        }
+    }
 
     public static class Client{public long id;public String name,whatsapp,phone,cnic,ntn,business,taxType,status,nextDue,email,address,notes;Client(long id,String name,String whatsapp,String phone,String cnic,String ntn,String business,String taxType,String status,String nextDue,String email,String address,String notes){this.id=id;this.name=name;this.whatsapp=whatsapp;this.phone=phone;this.cnic=cnic;this.ntn=ntn;this.business=business;this.taxType=taxType;this.status=status;this.nextDue=nextDue;this.email=email;this.address=address;this.notes=notes;}}
     public static class Filing{public long id;public String month,type,due,status,filed,notes;public int year;Filing(long i,String m,int y,String t,String d,String s,String f,String n){id=i;month=m;year=y;type=t;due=d;status=s;filed=f;notes=n;}}
