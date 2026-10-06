@@ -40,7 +40,7 @@ jobs:
           unzip -t property-return-filer/app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: FBR-Return-Filer-V9-QA-Passed-APK
+          name: FBR-Return-Filer-V12-QA-Passed-APK
           path: property-return-filer/app/build/outputs/apk/debug/app-debug.apk
 
   device-touch-test:
@@ -62,7 +62,7 @@ jobs:
           #!/usr/bin/env bash
           set -eu
           APK="property-return-filer/app/build/outputs/apk/debug/app-debug.apk"
-          PKG="com.muzamil.fbrreturnfiler.v9"
+          PKG="com.muzamil.fbrreturnfiler.v12"
           ACT="com.muzamil.propertyreturnfiler.MainActivity"
           adb install -r "$APK"
           adb logcat -c
@@ -92,5 +92,5 @@ jobs:
           script: bash ./fbr-device-test.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: FBR-Return-Filer-V9-Device-Tested-APK
+          name: FBR-Return-Filer-V12-Device-Tested-APK
           path: property-return-filer/app/build/outputs/apk/debug/app-debug.apk
