@@ -51,11 +51,29 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 100);
         }
         showSplash();
-        // Never allow the app to remain stuck on the welcome screen.
-        // The welcome UI stays visible briefly, then enters the dashboard automatically.
+        final String requested=getIntent()==null?null:getIntent().getStringExtra("open");
+        // Never allow the app to remain stuck on welcome. Notifications can deep-link to reminders.
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-            if (!dashboardOpened && !isFinishing()) openDashboardSafe();
+            if(dashboardOpened || isFinishing())return;
+            if("reminders".equals(requested)){
+                try{db.getWritableDatabase();dashboardOpened=true;showReminders();}
+                catch(Throwable e){Log.e("FBRReturnFiler","Reminder deep link failed",e);openDashboardSafe();}
+            }else openDashboardSafe();
         }, 900);
+    }
+
+    @Override protected void onNewIntent(Intent intent){
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if(intent!=null && "reminders".equals(intent.getStringExtra("open"))){
+            try{db.getWritableDatabase();dashboardOpened=true;showReminders();}
+            catch(Throwable e){openDashboardSafe();}
+        }
+    }
+
+    @Override public void onBackPressed(){
+        if(!"home".equals(activeNav) && dashboardOpened){showDashboard();return;}
+        super.onBackPressed();
     }
 
     private int dp(int v){ return (int)(v * getResources().getDisplayMetrics().density); }
