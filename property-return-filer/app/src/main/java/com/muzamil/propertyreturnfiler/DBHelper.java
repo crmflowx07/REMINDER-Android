@@ -143,8 +143,10 @@ public class DBHelper extends SQLiteOpenHelper {
     public void moveReminder(long id,long at){ContentValues v=new ContentValues();v.put("scheduledAt",at);v.put("status","Scheduled");getWritableDatabase().update("reminders",v,"id=?",new String[]{""+id});}
 
     public long addPayment(long clientId,String title,double amount,String due,String status,String notes){ContentValues v=new ContentValues();v.put("clientId",clientId);v.put("title",title);v.put("amount",amount);v.put("dueDate",due);v.put("status",status);v.put("notes",notes);return getWritableDatabase().insert("payments",null,v);}
+    public void setPaymentStatus(long id,String status){ContentValues v=new ContentValues();v.put("status",status);getWritableDatabase().update("payments",v,"id=?",new String[]{""+id});}
     public List<Payment> payments(long clientId){ArrayList<Payment> l=new ArrayList<>();Cursor c=getReadableDatabase().rawQuery("SELECT id,title,amount,dueDate,status,notes FROM payments WHERE clientId=? ORDER BY id DESC",new String[]{""+clientId});while(c.moveToNext())l.add(new Payment(c.getLong(0),c.getString(1),c.getDouble(2),c.getString(3),c.getString(4),c.getString(5)));c.close();return l;}
     public long addDocument(long clientId,String title,String category,String status,String notes){ContentValues v=new ContentValues();v.put("clientId",clientId);v.put("title",title);v.put("category",category);v.put("status",status);v.put("notes",notes);return getWritableDatabase().insert("documents",null,v);}
+    public void setDocumentStatus(long id,String status){ContentValues v=new ContentValues();v.put("status",status);getWritableDatabase().update("documents",v,"id=?",new String[]{""+id});}
     public List<Document> documents(long clientId){ArrayList<Document> l=new ArrayList<>();Cursor c=getReadableDatabase().rawQuery("SELECT id,title,category,status,notes FROM documents WHERE clientId=? ORDER BY id DESC",new String[]{""+clientId});while(c.moveToNext())l.add(new Document(c.getLong(0),c.getString(1),c.getString(2),c.getString(3),c.getString(4)));c.close();return l;}
 
     public String exportJson() throws JSONException {
