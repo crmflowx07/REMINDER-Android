@@ -30,12 +30,12 @@ public class MainActivityFlowTest {
         return null;
     }
 
-    @Test public void splashHasWorkingGetStartedListener(){
+    @Test public void appLaunchesDirectlyToDashboard(){
         MainActivity activity=Robolectric.buildActivity(MainActivity.class).setup().get();
-        TextView getStarted=findText(activity.getWindow().getDecorView(),"Get Started");
-        assertNotNull("Get Started must exist",getStarted);
-        assertTrue("Get Started must be clickable",getStarted.isClickable());
-        assertTrue("Get Started must have a click listener",getStarted.hasOnClickListeners());
+        View decor=activity.getWindow().getDecorView();
+        assertNull("V13 must not show Get Started",findText(decor,"Get Started"));
+        assertNotNull("V13 must launch dashboard immediately",findText(decor,"Good Morning"));
+        assertNotNull("Dashboard must show Total Clients",findText(decor,"Total Clients"));
     }
 
     @Test public void dashboardRendersWithoutCrash() throws Exception {
