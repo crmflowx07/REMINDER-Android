@@ -66,10 +66,11 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           script: |
+            cat > /tmp/fbr-device-test.sh <<'BASH'
             set -eu
-            APK=property-return-filer/app/build/outputs/apk/debug/app-debug.apk
-            PKG=com.muzamil.fbrreturnfiler.v7
-            ACT=com.muzamil.propertyreturnfiler.MainActivity
+            APK="property-return-filer/app/build/outputs/apk/debug/app-debug.apk"
+            PKG="com.muzamil.fbrreturnfiler.v7"
+            ACT="com.muzamil.propertyreturnfiler.MainActivity"
             adb install -r "$APK"
             adb logcat -c
             adb shell am force-stop "$PKG"
@@ -83,7 +84,7 @@ jobs:
             x=open('splash.xml',encoding='utf-8').read()
             for n in re.findall(r'<node[^>]+>',x):
                 if 'Get Started' in n:
-                    m=re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',n)
+                    m=re.search(r'bounds="\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]"',n)
                     if m:
                         a,b,c,d=map(int,m.groups())
                         open('tap.txt','w').write(f"{(a+c)//2} {(b+d)//2}")
@@ -103,6 +104,8 @@ jobs:
               exit 1
             fi
             echo "PASS: Physical Get Started tap opened dashboard"
+            BASH
+            bash /tmp/fbr-device-test.sh
       - uses: actions/upload-artifact@v4
         with:
           name: FBR-Return-Filer-V8-Real-Tap-Tested-APK
