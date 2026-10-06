@@ -9,12 +9,16 @@ import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputType;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.*;
 import android.util.Log;
 import android.widget.*;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity {
     private final int BLUE = Color.rgb(24,117,246);
@@ -35,6 +39,8 @@ public class MainActivity extends Activity {
     private String activeNav = "home";
     String lastDashboardError = "";
     private boolean dashboardOpened = false;
+    private static final int REQ_EXPORT_BACKUP=501;
+    private static final int REQ_IMPORT_BACKUP=502;
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
@@ -542,6 +548,11 @@ public class MainActivity extends Activity {
         setContentView(root);
 
         renderClients(list,q);
+        search.addTextChangedListener(new TextWatcher(){
+            @Override public void beforeTextChanged(CharSequence s,int st,int count,int after){}
+            @Override public void onTextChanged(CharSequence s,int st,int before,int count){renderClients(list,s==null?"":s.toString());}
+            @Override public void afterTextChanged(Editable e){}
+        });
         search.setOnEditorActionListener((v,a,e)->{renderClients(list,search.getText().toString());return true;});
         filter.setOnClickListener(v->showClientFilterDialog(list));
     }
@@ -854,7 +865,22 @@ public class MainActivity extends Activity {
     private void showFilingsHub(){activeNav="more";shell("Filing Center","All clients and return workload");for(DBHelper.Client cl:db.clients("")){LinearLayout x=card(16);x.addView(tv(cl.name,13,INK,true));x.addView(tv(db.filings(cl.id).size()+" filing records • "+safe(cl.taxType),10,MUTED,false));x.setOnClickListener(v->showClientFilings(cl.id));body.addView(x);}}
     private void showDocumentsHub(){activeNav="more";shell("Documents","Client document checklists");for(DBHelper.Client cl:db.clients("")){int n=db.documents(cl.id).size();if(n>0){LinearLayout x=card(16);x.addView(tv(cl.name,13,INK,true));x.addView(tv(n+" document records",10,MUTED,false));x.setOnClickListener(v->showClientDocuments(cl.id));body.addView(x);}}}
     private void showPaymentsHub(){activeNav="more";shell("Payments","Consultancy fees and dues");for(DBHelper.Client cl:db.clients("")){int n=db.payments(cl.id).size();if(n>0){LinearLayout x=card(16);x.addView(tv(cl.name,13,INK,true));x.addView(tv(n+" payment records",10,MUTED,false));x.setOnClickListener(v->showClientPayments(cl.id));body.addView(x);}}}
-    private void showBackupInfo(){activeNav="more";shell("Backup & Restore","Protect local ERP data");body.addView(emptyState("Local-first storage","Client data is stored in private SQLite. Full export/import backup is the next production-hardening step."));}
+    private void showBackupInfo(){
+        activeNav="more";shell("Backup & Restore","Protect all local ERP data");
+        LinearLayout info=card(18);
+        info.addView(tv("Full JSON Backup",15,INK,true));
+        info.addView(tv("Clients, filings, reminders, payments and document records are included.",11,MUTED,false));
+        body.addView(info);
+        Button export=actionButton("Export Backup",R.drawable.ic_doc,true);
+        export.setOnClickListener(v->exportBackup());
+        body.addView(export,new LinearLayout.LayoutParams(-1,dp(52)));
+        body.addView(spacer(8));
+        Button restore=actionButton("Restore Backup",R.drawable.ic_settings,false);
+        restore.setOnClickListener(v->importBackup());
+        body.addView(restore,new LinearLayout.LayoutParams(-1,dp(52)));
+        body.addView(spacer(12));
+        body.addView(emptyState("Safe restore","Restore replaces current local ERP records with the selected FBR Return Filer backup."));
+    }
     private void showSettingsInfo(){activeNav="more";shell("Settings","FBR Return Filer preferences");body.addView(infoCard("App","FBR Return Filer Pro",R.drawable.ic_settings,false));body.addView(infoCard("Storage","Private SQLite on device",R.drawable.ic_doc,false));body.addView(infoCard("Reminder channel","Local notification + WhatsApp",R.drawable.ic_bell,false));}
 
     private void clientForm(DBHelper.Client c){
@@ -893,8 +919,9 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("Add Reminder").setView(f).setNegativeButton("Cancel",null).setPositiveButton("Schedule",(d,w)->{
             int m=1;try{m=Integer.parseInt(val(mins));}catch(Exception ignored){}
             long at=System.currentTimeMillis()+m*60000L;
-            db.addReminder(clientId,val(title),val(msg),at,"Monthly","Local + WhatsApp");
-            scheduleLocal(val(title),val(msg),at);showReminders();
+            long rid=db.addReminder(clientId,val(title),val(msg),at,"Monthly","Local + WhatsApp");
+            ReminderScheduler.schedule(this,rid,val(title),val(msg),at,"Monthly");
+            showReminders();
         }).show();
     }
 
@@ -912,13 +939,8 @@ public class MainActivity extends Activity {
     }
 
     private void scheduleLocal(String title,String msg,long at){
-        Intent i=new Intent(this,ReminderReceiver.class);i.putExtra("title",title);i.putExtra("message",msg);
-        PendingIntent pi=PendingIntent.getBroadcast(this,(int)(System.currentTimeMillis()%1000000),i,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-        AlarmManager am=(AlarmManager)getSystemService(ALARM_SERVICE);
-        try{
-            if(android.os.Build.VERSION.SDK_INT>=31 && !am.canScheduleExactAlarms()) am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,pi);
-            else am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,pi);
-        }catch(Exception e){am.set(AlarmManager.RTC_WAKEUP,at,pi);}
+        long rid=db.addReminder(0,title,msg,at,"Once","Local");
+        ReminderScheduler.schedule(this,rid,title,msg,at,"Once");
         toast("Reminder scheduled");
     }
 
@@ -932,6 +954,63 @@ public class MainActivity extends Activity {
 
     private void openUrl(String u){
         try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(u)));}catch(Exception e){toast("Link open nahi ho saka");}
+    }
+
+    private void exportBackup(){
+        Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        i.addCategory(Intent.CATEGORY_OPENABLE);
+        i.setType("application/json");
+        i.putExtra(Intent.EXTRA_TITLE,"FBR-Return-Filer-Backup-"+new SimpleDateFormat("yyyy-MM-dd-HHmm",Locale.US).format(new Date())+".json");
+        startActivityForResult(i,REQ_EXPORT_BACKUP);
+    }
+
+    private void importBackup(){
+        Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        i.addCategory(Intent.CATEGORY_OPENABLE);
+        i.setType("application/json");
+        startActivityForResult(i,REQ_IMPORT_BACKUP);
+    }
+
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if(resultCode!=RESULT_OK || data==null || data.getData()==null)return;
+        Uri uri=data.getData();
+        try{
+            if(requestCode==REQ_EXPORT_BACKUP){
+                String json=db.exportJson();
+                OutputStream out=getContentResolver().openOutputStream(uri);
+                if(out==null)throw new IOException("Cannot open backup destination");
+                out.write(json.getBytes(StandardCharsets.UTF_8));out.flush();out.close();
+                toast("Backup exported successfully");
+            }else if(requestCode==REQ_IMPORT_BACKUP){
+                new AlertDialog.Builder(this).setTitle("Restore backup?")
+                    .setMessage("Current local ERP records will be replaced by this backup.")
+                    .setNegativeButton("Cancel",null)
+                    .setPositiveButton("Restore",(d,w)->{
+                        try{
+                            InputStream in=getContentResolver().openInputStream(uri);
+                            if(in==null)throw new IOException("Cannot open backup");
+                            ByteArrayOutputStream bos=new ByteArrayOutputStream();
+                            byte[] buf=new byte[8192];int n;
+                            while((n=in.read(buf))>0)bos.write(buf,0,n);
+                            in.close();
+                            db.importJson(bos.toString("UTF-8"));
+                            rescheduleAllReminders();
+                            toast("Backup restored");
+                            showDashboard();
+                        }catch(Exception e){Log.e("FBRReturnFiler","Restore failed",e);toast("Backup restore failed");}
+                    }).show();
+            }
+        }catch(Exception e){Log.e("FBRReturnFiler","Backup action failed",e);toast("Backup action failed");}
+    }
+
+    private void rescheduleAllReminders(){
+        long now=System.currentTimeMillis();
+        for(DBHelper.Reminder r:db.reminders(0)){
+            if(!"Scheduled".equals(r.status))continue;
+            long at=Math.max(r.at,now+30000L);
+            ReminderScheduler.schedule(this,r.id,r.title,r.message,at,r.repeat);
+        }
     }
 
     private String safe(String s){return s==null||s.trim().isEmpty()?"—":s;}
