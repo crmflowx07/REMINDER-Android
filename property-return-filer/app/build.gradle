@@ -2,7 +2,7 @@ plugins { id 'com.android.application' }
 android {
     namespace 'com.muzamil.propertyreturnfiler'
     compileSdk 35
-    defaultConfig { applicationId 'com.muzamil.fbrreturnfiler.fixed'; minSdk 26; targetSdk 35; versionCode 10; versionName '10.0.0' }
+    defaultConfig { applicationId 'com.muzamil.fbrreturnfiler.v9'; minSdk 26; targetSdk 35; versionCode 9; versionName '9.0.0' }
     testOptions { unitTests.includeAndroidResources = true }
     buildTypes { release { minifyEnabled false; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' } }
 }
