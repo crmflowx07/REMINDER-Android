@@ -583,7 +583,7 @@ public class MainActivity extends Activity {
         filter.setOnClickListener(v->showClientFilterDialog(list));
     }
 
-    private View chip(String label,boolean on){
+    private TextView chip(String label,boolean on){
         TextView t=tv(label,10,on?Color.WHITE:Color.rgb(72,91,132),on);
         t.setGravity(Gravity.CENTER);
         t.setBackground(solid(on?BLUE:Color.rgb(239,244,251),16));
@@ -695,7 +695,7 @@ public class MainActivity extends Activity {
         body.addView(manage);
     }
 
-    private View tab(String label,boolean on){
+    private TextView tab(String label,boolean on){
         TextView t=tv(label,10,on?BLUE:Color.rgb(84,98,129),on);t.setGravity(Gravity.CENTER);
         if(on) t.setBackground(outline(Color.TRANSPARENT,0,BLUE));
         return t;
