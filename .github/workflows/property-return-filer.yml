@@ -1,4 +1,7 @@
 name: Build Property Return Filer APK
+concurrency:
+  group: fbr-return-filer-${{ github.ref }}
+  cancel-in-progress: true
 on:
   workflow_dispatch:
   push:
