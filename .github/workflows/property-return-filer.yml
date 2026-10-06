@@ -40,7 +40,7 @@ jobs:
           unzip -t property-return-filer/app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: FBR-Return-Filer-V10-QA-Passed-APK
+          name: FBR-Return-Filer-V9-QA-Passed-APK
           path: property-return-filer/app/build/outputs/apk/debug/app-debug.apk
 
   device-touch-test:
@@ -62,7 +62,7 @@ jobs:
           #!/usr/bin/env bash
           set -eu
           APK="property-return-filer/app/build/outputs/apk/debug/app-debug.apk"
-          PKG="com.muzamil.fbrreturnfiler.fixed"
+          PKG="com.muzamil.fbrreturnfiler.v9"
           ACT="com.muzamil.propertyreturnfiler.MainActivity"
           adb install -r "$APK"
           adb logcat -c
@@ -78,7 +78,7 @@ jobs:
             adb logcat -d
             exit 1
           fi
-          echo "PASS: Physical Get Started tap opened dashboard"
+          echo "PASS: App automatically entered dashboard; welcome screen cannot block"
           BASH
           chmod +x fbr-device-test.sh
       - name: Android 9 Pixel real tap QA
@@ -92,5 +92,5 @@ jobs:
           script: bash ./fbr-device-test.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: FBR-Return-Filer-V10-Device-Tested-APK
+          name: FBR-Return-Filer-V9-Device-Tested-APK
           path: property-return-filer/app/build/outputs/apk/debug/app-debug.apk
