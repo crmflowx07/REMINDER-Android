@@ -34,19 +34,12 @@ public class MainActivity extends Activity {
     private LinearLayout root;
     private String activeNav = "home";
     String lastDashboardError = "";
+    private boolean dashboardOpened = false;
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
+        // Keep first launch instant. Database is opened only when entering the dashboard.
         db = new DBHelper(this);
-        try { db.getWritableDatabase(); }
-        catch (Exception e) {
-            try {
-                db.close();
-                deleteDatabase("property_return_filer.db");
-                db = new DBHelper(this);
-                db.getWritableDatabase();
-            } catch (Exception ignored) {}
-        }
         if (android.os.Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 100);
@@ -168,6 +161,9 @@ public class MainActivity extends Activity {
         activeNav = "";
         FrameLayout frame = new FrameLayout(this);
         frame.setBackgroundColor(Color.WHITE);
+        frame.setClickable(true);
+        frame.setFocusable(true);
+        frame.setOnClickListener(v -> openDashboardSafe());
 
         ImageView art = new ImageView(this);
         art.setImageResource(R.drawable.bg_fbr_building);
@@ -225,11 +221,7 @@ public class MainActivity extends Activity {
         get.setEnabled(true);
         get.setElevation(dp(12));
         get.bringToFront();
-        get.setOnClickListener(v -> {
-            get.setEnabled(false);
-            openDashboardSafe();
-            get.setEnabled(true);
-        });
+        get.setOnClickListener(v -> openDashboardSafe());
 
         TextView foot=tv("Built for Tax Professionals in Pakistan",11,MUTED,false);
         foot.setGravity(Gravity.CENTER);
@@ -243,8 +235,8 @@ public class MainActivity extends Activity {
         // Fail-safe for devices/ROMs where the first button touch may be swallowed.
         // If the user has not already entered the app, continue automatically.
         new android.os.Handler(getMainLooper()).postDelayed(() -> {
-            if("".equals(activeNav)) openDashboardSafe();
-        }, 1800);
+            if (!dashboardOpened && !isFinishing()) openDashboardSafe();
+        }, 1000);
     }
 
     private View featureLine(String s){
@@ -326,7 +318,10 @@ public class MainActivity extends Activity {
     }
 
     private void openDashboardSafe(){
+        if (dashboardOpened || isFinishing()) return;
+        dashboardOpened = true;
         try {
+            db.getWritableDatabase();
             showDashboard();
         } catch (Throwable first) {
             Log.e("FBRReturnFiler","Dashboard first open failed",first);
@@ -338,6 +333,7 @@ public class MainActivity extends Activity {
                 showDashboard();
             } catch (Throwable second) {
                 Log.e("FBRReturnFiler","Dashboard recovery failed",second);
+                dashboardOpened = false;
                 showRecoveryScreen();
             }
         }
@@ -368,6 +364,7 @@ public class MainActivity extends Activity {
     }
 
     private void showDashboard(){
+        dashboardOpened = true;
         activeNav="home";
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
