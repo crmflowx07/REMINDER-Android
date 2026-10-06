@@ -72,7 +72,7 @@ jobs:
           adb shell uiautomator dump /sdcard/splash.xml >/dev/null
           adb pull /sdcard/splash.xml splash.xml >/dev/null
           grep -q "Get Started" splash.xml
-          python3 -c 'import re,xml.etree.ElementTree as ET; root=ET.parse("splash.xml").getroot(); node=next((n for n in root.iter("node") if "Get Started" in n.attrib.get("text","")),None); assert node is not None,"Get Started node not found"; m=re.match(r"\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]",node.attrib["bounds"]); assert m,"bounds missing"; a,b,c,d=map(int,m.groups()); open("tap.txt","w").write(f"{(a+c)//2} {(b+d)//2}")'
+          python3 -c 'import re,xml.etree.ElementTree as ET; root=ET.parse("splash.xml").getroot(); node=next((n for n in root.iter("node") if "Get Started" in n.attrib.get("text","")),None); assert node is not None,"Get Started node not found"; nums=list(map(int,re.findall(r"\\d+",node.attrib.get("bounds","")))); assert len(nums)>=4,f"bad bounds: {node.attrib.get(\"bounds\")}"; a,b,c,d=nums[:4]; open("tap.txt","w").write(f"{(a+c)//2} {(b+d)//2}")'
           read X Y < tap.txt
           adb shell input tap "$X" "$Y"
           sleep 3
