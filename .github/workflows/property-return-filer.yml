@@ -56,7 +56,38 @@ jobs:
         with:
           gradle-version: '8.9'
       - name: Build APK for device test
-        run: gradle -p property-return-filer :app:assembleDebug
+        run: |
+          gradle -p property-return-filer :app:assembleDebug
+          cat > fbr-device-test.sh <<'BASH'
+          #!/usr/bin/env bash
+          set -eu
+          APK="property-return-filer/app/build/outputs/apk/debug/app-debug.apk"
+          PKG="com.muzamil.fbrreturnfiler.v7"
+          ACT="com.muzamil.propertyreturnfiler.MainActivity"
+          adb install -r "$APK"
+          adb logcat -c
+          adb shell am force-stop "$PKG"
+          adb shell am start -W -n "$PKG/$ACT"
+          sleep 2
+          adb shell uiautomator dump /sdcard/splash.xml >/dev/null
+          adb pull /sdcard/splash.xml splash.xml >/dev/null
+          grep -q "Get Started" splash.xml
+          python3 -c 'import re,sys; x=open("splash.xml",encoding="utf-8").read(); nodes=re.findall(r"<node[^>]+>",x); matches=[re.search(r"bounds=\"\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]\"",n) for n in nodes if "Get Started" in n]; m=next((m for m in matches if m),None); sys.exit("Get Started bounds not found") if not m else None; a,b,c,d=map(int,m.groups()); open("tap.txt","w").write(f"{(a+c)//2} {(b+d)//2}")'
+          read X Y < tap.txt
+          adb shell input tap "$X" "$Y"
+          sleep 3
+          adb shell uiautomator dump /sdcard/dashboard.xml >/dev/null
+          adb pull /sdcard/dashboard.xml dashboard.xml >/dev/null
+          grep -q "Good Morning" dashboard.xml
+          grep -q "Total Clients" dashboard.xml
+          grep -q "Quick Actions" dashboard.xml
+          if adb logcat -d | grep -E "FATAL EXCEPTION|Process: $PKG" | grep -q .; then
+            adb logcat -d
+            exit 1
+          fi
+          echo "PASS: Physical Get Started tap opened dashboard"
+          BASH
+          chmod +x fbr-device-test.sh
       - name: Android 9 Pixel real tap QA
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -65,47 +96,7 @@ jobs:
           profile: pixel_2
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          script: |
-            cat > /tmp/fbr-device-test.sh <<'BASH'
-            set -eu
-            APK="property-return-filer/app/build/outputs/apk/debug/app-debug.apk"
-            PKG="com.muzamil.fbrreturnfiler.v7"
-            ACT="com.muzamil.propertyreturnfiler.MainActivity"
-            adb install -r "$APK"
-            adb logcat -c
-            adb shell am force-stop "$PKG"
-            adb shell am start -W -n "$PKG/$ACT"
-            sleep 2
-            adb shell uiautomator dump /sdcard/splash.xml >/dev/null
-            adb pull /sdcard/splash.xml splash.xml >/dev/null
-            grep -q "Get Started" splash.xml
-            python3 - <<'PY'
-            import re,sys
-            x=open('splash.xml',encoding='utf-8').read()
-            for n in re.findall(r'<node[^>]+>',x):
-                if 'Get Started' in n:
-                    m=re.search(r'bounds="\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]"',n)
-                    if m:
-                        a,b,c,d=map(int,m.groups())
-                        open('tap.txt','w').write(f"{(a+c)//2} {(b+d)//2}")
-                        sys.exit(0)
-            raise SystemExit('Get Started bounds not found')
-            PY
-            read X Y < tap.txt
-            adb shell input tap "$X" "$Y"
-            sleep 3
-            adb shell uiautomator dump /sdcard/dashboard.xml >/dev/null
-            adb pull /sdcard/dashboard.xml dashboard.xml >/dev/null
-            grep -q "Good Morning" dashboard.xml
-            grep -q "Total Clients" dashboard.xml
-            grep -q "Quick Actions" dashboard.xml
-            if adb logcat -d | grep -E "FATAL EXCEPTION|Process: $PKG" | grep -q .; then
-              adb logcat -d
-              exit 1
-            fi
-            echo "PASS: Physical Get Started tap opened dashboard"
-            BASH
-            bash /tmp/fbr-device-test.sh
+          script: bash ./fbr-device-test.sh
       - uses: actions/upload-artifact@v4
         with:
           name: FBR-Return-Filer-V8-Real-Tap-Tested-APK
