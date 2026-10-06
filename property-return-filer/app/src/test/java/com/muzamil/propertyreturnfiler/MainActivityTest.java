@@ -19,13 +19,9 @@ import java.lang.reflect.Field;
 public class MainActivityTest {
 
     @Test
-    public void getStartedDashboardAndClientsFlowWorks() {
+    public void directDashboardAndClientsFlowWorks() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class).setup();
         MainActivity activity = controller.get();
-
-        View getStarted = findText(activity.getWindow().getDecorView(), "Get Started");
-        assertNotNull("Splash must contain Get Started", getStarted);
-        assertTrue("Get Started listener must execute", getStarted.callOnClick());
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
         View dashboardRoot;
@@ -36,10 +32,11 @@ public class MainActivityTest {
         } catch(Exception e) {
             throw new AssertionError(e);
         }
-        assertNotNull("Get Started must create dashboard root", dashboardRoot);
+        assertNotNull("App must launch directly into dashboard", dashboardRoot);
         assertNotNull("Dashboard must show Good Morning", findText(dashboardRoot, "Good Morning"));
         assertNotNull("Dashboard must show Total Clients", findText(dashboardRoot, "Total Clients"));
         assertNotNull("Dashboard must show Quick Actions", findText(dashboardRoot, "Quick Actions"));
+        assertNull("Get Started must not exist in V13", findText(dashboardRoot, "Get Started"));
 
         View clients = findExactText(dashboardRoot, "Clients");
         assertNotNull("Dashboard must expose Clients", clients);
