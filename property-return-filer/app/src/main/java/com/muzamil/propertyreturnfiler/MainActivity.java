@@ -437,6 +437,53 @@ public class MainActivity extends Activity {
         Space q4=new Space(this);quick2.addView(q4,new LinearLayout.LayoutParams(dp(8),1));
         quick2.addView(quick("FBR Portal",R.drawable.ic_fbr_portal,()->openUrl("https://iris.fbr.gov.pk/")),new LinearLayout.LayoutParams(0,dp(82),1));
         body.addView(quick2);
+
+        body.addView(section("Compliance Overview"));
+        LinearLayout compliance=card(20);
+        compliance.addView(progressLine("Return filing progress",db.countFiled(),Math.max(1,db.countFiled()+db.countPending()),GREEN));
+        compliance.addView(spacer(10));
+        compliance.addView(progressLine("Pending workload",db.countPending(),Math.max(1,db.countFiled()+db.countPending()),ORANGE));
+        compliance.addView(spacer(10));
+        compliance.addView(progressLine("Reminder coverage",db.countReminders(),Math.max(1,db.countClients()),BLUE));
+        body.addView(compliance);
+
+        LinearLayout dh=new LinearLayout(this);dh.setGravity(Gravity.CENTER_VERTICAL);
+        dh.addView(section("Upcoming Deadlines"),new LinearLayout.LayoutParams(0,-2,1));
+        TextView all=tv("View clients",11,BLUE,true);all.setOnClickListener(v->showClients(""));dh.addView(all);body.addView(dh);
+        int shown=0;
+        for(DBHelper.Client cx:db.clients("")){
+            if(shown>=4) break;
+            LinearLayout due=card(16);due.setOrientation(LinearLayout.HORIZONTAL);due.setGravity(Gravity.CENTER_VERTICAL);
+            TextView avx=avatar(cx.name,42);due.addView(avx,new LinearLayout.LayoutParams(dp(42),dp(42)));
+            LinearLayout dt=new LinearLayout(this);dt.setOrientation(LinearLayout.VERTICAL);dt.setPadding(dp(10),0,0,0);
+            dt.addView(tv(cx.name,13,INK,true));dt.addView(tv(safe(cx.taxType),10,MUTED,false));dt.addView(iconText(safe(cx.nextDue),R.drawable.ic_calendar,10,RED,true));
+            due.addView(dt,new LinearLayout.LayoutParams(0,-2,1));
+            TextView open=tv("Open  ›",10,BLUE,true);due.addView(open);due.setOnClickListener(v->showClient(cx.id));
+            body.addView(due);shown++;
+        }
+
+        body.addView(section("Recent Activity"));
+        body.addView(activityCard("Ahmed Raza","Return documents received","2 min ago",R.drawable.ic_doc,GREEN));
+        body.addView(activityCard("Sana Khan","Income Tax Return marked filed","Today, 11:25 AM",R.drawable.ic_doc,BLUE));
+        body.addView(activityCard("Mubeen Traders","WhatsApp reminder scheduled","Today, 9:40 AM",R.drawable.ic_bell,ORANGE));
+    }
+
+    private View progressLine(String label,int value,int max,int color){
+        LinearLayout wrap=new LinearLayout(this);wrap.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout head=new LinearLayout(this);head.setGravity(Gravity.CENTER_VERTICAL);
+        head.addView(tv(label,12,INK,true),new LinearLayout.LayoutParams(0,-2,1));
+        int pct=(int)Math.round(value*100.0/Math.max(1,max));
+        head.addView(tv(pct+"%",11,color,true));wrap.addView(head);
+        ProgressBar p=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);p.setMax(Math.max(1,max));p.setProgress(value);wrap.addView(p,new LinearLayout.LayoutParams(-1,dp(8)));
+        return wrap;
+    }
+
+    private View activityCard(String name,String action,String time,int icon,int color){
+        LinearLayout c=card(16);c.setOrientation(LinearLayout.HORIZONTAL);c.setGravity(Gravity.CENTER_VERTICAL);
+        TextView ic=iconCircle(icon);ic.setBackground(solid(Color.rgb(239,244,251),14));c.addView(ic,new LinearLayout.LayoutParams(dp(42),dp(42)));
+        LinearLayout tx=new LinearLayout(this);tx.setOrientation(LinearLayout.VERTICAL);tx.setPadding(dp(10),0,0,0);
+        tx.addView(tv(name,13,INK,true));tx.addView(tv(action,11,MUTED,false));tx.addView(tv(time,9,color,true));c.addView(tx,new LinearLayout.LayoutParams(0,-2,1));
+        return c;
     }
 
     private View metric(String title,String number,String sub,int icon,int iconColor,int iconBg){
@@ -560,6 +607,23 @@ public class MainActivity extends Activity {
         body.addView(infoCard("Next Due Date",safe(c.nextDue),R.drawable.ic_calendar,false));
         body.addView(infoCard("Notes",safe(c.notes),R.drawable.ic_doc,false));
 
+        body.addView(section("Client Workspace"));
+        LinearLayout ws1=new LinearLayout(this);
+        ws1.addView(workspaceTile("Filings",db.filings(id).size()+" records",R.drawable.ic_doc,BLUE,()->showClientFilings(id)),new LinearLayout.LayoutParams(0,dp(96),1));
+        Space wsg1=new Space(this);ws1.addView(wsg1,new LinearLayout.LayoutParams(dp(8),1));
+        ws1.addView(workspaceTile("Reminders",db.reminders(id).size()+" scheduled",R.drawable.ic_bell,ORANGE,()->showClientReminders(id)),new LinearLayout.LayoutParams(0,dp(96),1));
+        body.addView(ws1);
+        LinearLayout ws2=new LinearLayout(this);
+        ws2.addView(workspaceTile("Documents",db.documents(id).size()+" items",R.drawable.ic_doc,PURPLE,()->showClientDocuments(id)),new LinearLayout.LayoutParams(0,dp(96),1));
+        Space wsg2=new Space(this);ws2.addView(wsg2,new LinearLayout.LayoutParams(dp(8),1));
+        ws2.addView(workspaceTile("Payments",db.payments(id).size()+" entries",R.drawable.ic_payment,GREEN,()->showClientPayments(id)),new LinearLayout.LayoutParams(0,dp(96),1));
+        body.addView(ws2);
+
+        body.addView(section("Filing Timeline"));
+        List<DBHelper.Filing> clientFiles=db.filings(id);
+        if(clientFiles.isEmpty()) body.addView(emptyState("No filing record yet","Add the first monthly/annual filing for this client."));
+        else for(int i=0;i<Math.min(3,clientFiles.size());i++) body.addView(filingMini(id,clientFiles.get(i)));
+
         LinearLayout actions=new LinearLayout(this);
         Button wa=actionButton("WhatsApp",R.drawable.ic_chat,true);wa.setBackground(gradient(Color.rgb(22,196,96),Color.rgb(10,172,75),18));wa.setOnClickListener(v->openWhatsApp(c));actions.addView(wa,new LinearLayout.LayoutParams(0,dp(58),1));
         Space s1=new Space(this);actions.addView(s1,new LinearLayout.LayoutParams(dp(8),1));
@@ -631,12 +695,22 @@ public class MainActivity extends Activity {
     }
 
     private void showMore(){
-        activeNav="more";shell("More","Settings and tools");
+        activeNav="more";shell("Workspace","Complete FBR operations center");
+        LinearLayout brand=card(20);brand.setBackground(gradient(Color.rgb(33,133,255),Color.rgb(19,81,218),20));
+        brand.addView(tv("FBR Return Filer Pro",19,Color.WHITE,true));
+        brand.addView(tv("Clients • Returns • Documents • Payments • Reminders • Reports",11,0xFFEAF4FF,false));
+        body.addView(brand);
+        body.addView(section("Operations"));
         body.addView(menuRow("FBR Portal",R.drawable.ic_fbr_portal,()->openUrl("https://iris.fbr.gov.pk/")));
         body.addView(menuRow("Client Database",R.drawable.ic_people,()->showClients("")));
-        body.addView(menuRow("Reminder Settings",R.drawable.ic_bell,()->showReminders()));
-        body.addView(menuRow("Reports",R.drawable.ic_grid,()->showReports()));
-        body.addView(menuRow("App Settings",R.drawable.ic_settings,()->toast("Settings ready")));
+        body.addView(menuRow("Filing Center",R.drawable.ic_doc,()->showFilingsHub()));
+        body.addView(menuRow("Reminder Center",R.drawable.ic_bell,()->showReminders()));
+        body.addView(menuRow("Documents Checklist",R.drawable.ic_doc,()->showDocumentsHub()));
+        body.addView(menuRow("Payments & Fees",R.drawable.ic_payment,()->showPaymentsHub()));
+        body.addView(menuRow("Reports & Compliance",R.drawable.ic_grid,()->showReports()));
+        body.addView(section("System"));
+        body.addView(menuRow("Backup & Restore",R.drawable.ic_settings,()->showBackupInfo()));
+        body.addView(menuRow("App Settings",R.drawable.ic_settings,()->showSettingsInfo()));
     }
 
     private View menuRow(String title,int icon,Runnable r){
@@ -645,6 +719,78 @@ public class MainActivity extends Activity {
         TextView t=tv(title,14,INK,true);t.setPadding(dp(12),0,0,0);c.addView(t,new LinearLayout.LayoutParams(0,-2,1));
         TextView go=tv("›",24,MUTED,false);c.addView(go);c.setOnClickListener(v->r.run());return c;
     }
+
+    private View workspaceTile(String title,String sub,int icon,int color,Runnable run){
+        LinearLayout x=new LinearLayout(this);x.setOrientation(LinearLayout.VERTICAL);x.setGravity(Gravity.CENTER);x.setBackground(solid(Color.WHITE,18));x.setElevation(dp(1));
+        TextView ic=iconCircle(icon);ic.setBackground(solid(Color.rgb(238,245,255),14));x.addView(ic,new LinearLayout.LayoutParams(dp(42),dp(42)));
+        TextView h=tv(title,12,INK,true);h.setGravity(Gravity.CENTER);x.addView(h);
+        TextView s=tv(sub,9,color,true);s.setGravity(Gravity.CENTER);x.addView(s);x.setOnClickListener(v->run.run());return x;
+    }
+
+    private View emptyState(String title,String sub){
+        LinearLayout c=card(16);TextView h=tv(title,13,INK,true);h.setGravity(Gravity.CENTER);c.addView(h);TextView s=tv(sub,10,MUTED,false);s.setGravity(Gravity.CENTER);c.addView(s);return c;
+    }
+
+    private View filingMini(long clientId,DBHelper.Filing f){
+        LinearLayout c=card(16);LinearLayout r=new LinearLayout(this);r.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout tx=new LinearLayout(this);tx.setOrientation(LinearLayout.VERTICAL);
+        tx.addView(tv(f.month+" "+f.year,13,INK,true));tx.addView(tv(safe(f.type),10,MUTED,false));tx.addView(tv("Due "+safe(f.due),9,RED,true));
+        r.addView(tx,new LinearLayout.LayoutParams(0,-2,1));
+        TextView st=tv(safe(f.status),9,"Filed".equals(f.status)?GREEN:ORANGE,true);st.setGravity(Gravity.CENTER);st.setBackground(solid(statusBg(f.status),12));r.addView(st,new LinearLayout.LayoutParams(dp(72),dp(26)));c.addView(r);
+        if(!"Filed".equals(f.status)){
+            Button mark=actionButton("Mark Filed",R.drawable.ic_doc,false);mark.setOnClickListener(v->{db.setFilingStatus(f.id,"Filed");showClient(clientId);});
+            LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(-1,dp(42));mp.setMargins(0,dp(8),0,0);c.addView(mark,mp);
+        }
+        return c;
+    }
+
+    private void showClientFilings(long id){
+        DBHelper.Client cl=db.client(id);activeNav="clients";shell("Filings",cl==null?"Client returns":cl.name);
+        Button add=actionButton("Add Filing",R.drawable.ic_add,true);add.setOnClickListener(v->filingForm(id));body.addView(add,new LinearLayout.LayoutParams(-1,dp(52)));
+        body.addView(spacer(8));
+        List<DBHelper.Filing> fs=db.filings(id);if(fs.isEmpty())body.addView(emptyState("No filings","Create monthly or annual filing record."));
+        for(DBHelper.Filing f:fs)body.addView(filingMini(id,f));
+    }
+
+    private void showClientReminders(long id){
+        DBHelper.Client cl=db.client(id);activeNav="reminders";shell("Client Reminders",cl==null?"Follow-ups":cl.name);
+        Button add=actionButton("Schedule Reminder",R.drawable.ic_bell,true);add.setOnClickListener(v->reminderForm(id));body.addView(add,new LinearLayout.LayoutParams(-1,dp(52)));
+        body.addView(spacer(8));List<DBHelper.Reminder> rs=db.reminders(id);
+        if(rs.isEmpty())body.addView(emptyState("No reminders","Schedule a local + WhatsApp follow-up."));
+        for(DBHelper.Reminder rr:rs){LinearLayout x=card(16);x.addView(tv(rr.title,13,INK,true));x.addView(tv(rr.repeat+" • "+rr.channel,10,MUTED,false));x.addView(tv(new SimpleDateFormat("dd MMM yyyy, hh:mm a",Locale.US).format(new Date(rr.at)),10,BLUE,true));body.addView(x);}
+    }
+
+    private void showClientDocuments(long id){
+        DBHelper.Client cl=db.client(id);activeNav="more";shell("Documents",cl==null?"Checklist":cl.name);
+        Button add=actionButton("Add Document",R.drawable.ic_add,true);add.setOnClickListener(v->documentForm(id));body.addView(add,new LinearLayout.LayoutParams(-1,dp(52)));body.addView(spacer(8));
+        List<DBHelper.Document> ds=db.documents(id);if(ds.isEmpty())body.addView(emptyState("No documents","Track required and received documents."));
+        for(DBHelper.Document d:ds){LinearLayout x=card(16);x.addView(tv(d.title,13,INK,true));x.addView(tv(d.category+" • "+d.status,10,MUTED,false));x.addView(tv(safe(d.notes),10,BLUE,false));body.addView(x);}
+    }
+
+    private void showClientPayments(long id){
+        DBHelper.Client cl=db.client(id);activeNav="more";shell("Payments",cl==null?"Fee ledger":cl.name);
+        Button add=actionButton("Add Payment",R.drawable.ic_add,true);add.setOnClickListener(v->paymentForm(id));body.addView(add,new LinearLayout.LayoutParams(-1,dp(52)));body.addView(spacer(8));
+        List<DBHelper.Payment> ps=db.payments(id);if(ps.isEmpty())body.addView(emptyState("No payments","Track consultancy fees and dues."));
+        for(DBHelper.Payment p:ps){LinearLayout x=card(16);LinearLayout r=new LinearLayout(this);r.setGravity(Gravity.CENTER_VERTICAL);LinearLayout tx=new LinearLayout(this);tx.setOrientation(LinearLayout.VERTICAL);tx.addView(tv(p.title,13,INK,true));tx.addView(tv("Due "+safe(p.due)+" • "+p.status,10,MUTED,false));r.addView(tx,new LinearLayout.LayoutParams(0,-2,1));r.addView(tv("PKR "+String.format(Locale.US,"%.0f",p.amount),13,BLUE,true));x.addView(r);body.addView(x);}
+    }
+
+    private void documentForm(long id){
+        LinearLayout f=new LinearLayout(this);f.setOrientation(LinearLayout.VERTICAL);f.setPadding(dp(18),dp(8),dp(18),dp(8));
+        EditText t=field(f,"Document title","Bank Statement");EditText cat=field(f,"Category","FBR Documents");EditText st=field(f,"Status","Required");EditText n=field(f,"Notes","");
+        new AlertDialog.Builder(this).setTitle("Add Document").setView(f).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{db.addDocument(id,val(t),val(cat),val(st),val(n));showClientDocuments(id);}).show();
+    }
+
+    private void paymentForm(long id){
+        LinearLayout f=new LinearLayout(this);f.setOrientation(LinearLayout.VERTICAL);f.setPadding(dp(18),dp(8),dp(18),dp(8));
+        EditText t=field(f,"Payment title","Consultancy Fee");EditText a=field(f,"Amount","5000");a.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);EditText due=field(f,"Due date","10 Oct 2026");EditText st=field(f,"Status","Pending");
+        new AlertDialog.Builder(this).setTitle("Add Payment").setView(f).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{double amount=0;try{amount=Double.parseDouble(val(a));}catch(Exception ignored){}db.addPayment(id,val(t),amount,val(due),val(st),"");showClientPayments(id);}).show();
+    }
+
+    private void showFilingsHub(){activeNav="more";shell("Filing Center","All clients and return workload");for(DBHelper.Client cl:db.clients("")){LinearLayout x=card(16);x.addView(tv(cl.name,13,INK,true));x.addView(tv(db.filings(cl.id).size()+" filing records • "+safe(cl.taxType),10,MUTED,false));x.setOnClickListener(v->showClientFilings(cl.id));body.addView(x);}}
+    private void showDocumentsHub(){activeNav="more";shell("Documents","Client document checklists");for(DBHelper.Client cl:db.clients("")){int n=db.documents(cl.id).size();if(n>0){LinearLayout x=card(16);x.addView(tv(cl.name,13,INK,true));x.addView(tv(n+" document records",10,MUTED,false));x.setOnClickListener(v->showClientDocuments(cl.id));body.addView(x);}}}
+    private void showPaymentsHub(){activeNav="more";shell("Payments","Consultancy fees and dues");for(DBHelper.Client cl:db.clients("")){int n=db.payments(cl.id).size();if(n>0){LinearLayout x=card(16);x.addView(tv(cl.name,13,INK,true));x.addView(tv(n+" payment records",10,MUTED,false));x.setOnClickListener(v->showClientPayments(cl.id));body.addView(x);}}}
+    private void showBackupInfo(){activeNav="more";shell("Backup & Restore","Protect local ERP data");body.addView(emptyState("Local-first storage","Client data is stored in private SQLite. Full export/import backup is the next production-hardening step."));}
+    private void showSettingsInfo(){activeNav="more";shell("Settings","FBR Return Filer preferences");body.addView(infoCard("App","FBR Return Filer Pro",R.drawable.ic_settings,false));body.addView(infoCard("Storage","Private SQLite on device",R.drawable.ic_doc,false));body.addView(infoCard("Reminder channel","Local notification + WhatsApp",R.drawable.ic_bell,false));}
 
     private void clientForm(DBHelper.Client c){
         boolean edit=c!=null;
