@@ -604,10 +604,19 @@ public class MainActivity extends Activity {
 
         TextView av=avatar(c.name,82);LinearLayout.LayoutParams avp=new LinearLayout.LayoutParams(dp(82),dp(82));avp.gravity=Gravity.CENTER_HORIZONTAL;body.addView(av,avp);
         TextView name=tv(c.name,22,INK,true);name.setGravity(Gravity.CENTER);body.addView(name);
-        TextView active=tv("Active Client",10,BLUE,true);active.setGravity(Gravity.CENTER);active.setBackground(solid(Color.rgb(232,244,255),15));LinearLayout.LayoutParams acp=new LinearLayout.LayoutParams(dp(96),dp(28));acp.gravity=Gravity.CENTER_HORIZONTAL;body.addView(active,acp);
+        String clientStatus=safe(c.status);
+        int clientStatusColor="Filed".equals(clientStatus)?GREEN:("Pending".equals(clientStatus)?ORANGE:BLUE);
+        TextView active=tv(clientStatus+" Client",10,clientStatusColor,true);active.setGravity(Gravity.CENTER);active.setBackground(solid(statusBg(clientStatus),15));LinearLayout.LayoutParams acp=new LinearLayout.LayoutParams(dp(110),dp(28));acp.gravity=Gravity.CENTER_HORIZONTAL;body.addView(active,acp);
 
         LinearLayout tabs=new LinearLayout(this);tabs.setGravity(Gravity.CENTER);
-        tabs.addView(tab("Overview",true));tabs.addView(tab("Filings ("+db.filings(id).size()+")",false));tabs.addView(tab("Reminders",false));tabs.addView(tab("Notes",false));
+        TextView ov=tab("Overview",true);
+        TextView ft=tab("Filings ("+db.filings(id).size()+")",false);
+        TextView rt=tab("Reminders",false);
+        TextView nt=tab("Notes",false);
+        ft.setOnClickListener(v->showClientFilings(id));
+        rt.setOnClickListener(v->showClientReminders(id));
+        nt.setOnClickListener(v->showClientNotes(id));
+        tabs.addView(ov);tabs.addView(ft);tabs.addView(rt);tabs.addView(nt);
         LinearLayout.LayoutParams tabp=new LinearLayout.LayoutParams(-1,dp(44));tabp.setMargins(0,dp(8),0,dp(8));body.addView(tabs,tabp);
 
         body.addView(infoCard("WhatsApp Number",safe(c.whatsapp),R.drawable.ic_chat,true));
@@ -642,6 +651,12 @@ public class MainActivity extends Activity {
         Space s2=new Space(this);actions.addView(s2,new LinearLayout.LayoutParams(dp(8),1));
         Button filing=actionButton("Add Filing",R.drawable.ic_doc,true);filing.setOnClickListener(v->filingForm(c.id));actions.addView(filing,new LinearLayout.LayoutParams(0,dp(58),1));
         body.addView(actions);
+        body.addView(spacer(10));
+        LinearLayout manage=new LinearLayout(this);
+        Button editBtn=actionButton("Edit Profile",R.drawable.ic_edit,false);editBtn.setOnClickListener(v->clientForm(c));manage.addView(editBtn,new LinearLayout.LayoutParams(0,dp(48),1));
+        Space mg=new Space(this);manage.addView(mg,new LinearLayout.LayoutParams(dp(8),1));
+        Button deleteBtn=actionButton("Delete Client",R.drawable.ic_more,false);deleteBtn.setTextColor(RED);deleteBtn.setOnClickListener(v->confirmDeleteClient(c));manage.addView(deleteBtn,new LinearLayout.LayoutParams(0,dp(48),1));
+        body.addView(manage);
     }
 
     private View tab(String label,boolean on){
@@ -661,24 +676,44 @@ public class MainActivity extends Activity {
 
     private void showReminders(){
         activeNav="reminders";
-        shell("Reminders & Filings","Never miss a deadline");
+        shell("Reminder Center","Real scheduled follow-ups");
 
-        LinearLayout tabs=new LinearLayout(this);
-        tabs.addView(chip("Upcoming",true));tabs.addView(chip("Filed",false));tabs.addView(chip("All",false));
-        body.addView(tabs,new LinearLayout.LayoutParams(-1,dp(38)));
+        LinearLayout hero=card(20);hero.setBackground(gradient(Color.rgb(44,151,255),Color.rgb(14,96,232),20));
+        hero.addView(tv("Scheduled Reminders",12,0xFFEAF4FF,false));
+        hero.addView(tv(String.valueOf(db.countReminders()),32,Color.WHITE,true));
+        hero.addView(tv("Monthly reminders auto-reschedule after firing and after phone reboot.",10,0xFFEAF4FF,false));
+        body.addView(hero);
 
-        addReminderMonth("July 2024", new String[][]{
-            {"Ali Enterprises","Sales Tax Return (STR)","15 Jul 2024","Overdue"},
-            {"Sana Khan","Income Tax Return (ITR)","31 Jul 2024","Pending"},
-            {"Faisal Ahmed","Income Tax Return (ITR)","31 Jul 2024","In 10 days"}
-        });
-        addReminderMonth("August 2024", new String[][]{
-            {"Ayesha Malik","Sales Tax Return (STR)","15 Aug 2024","In 25 days"},
-            {"Mubeen Traders","Income Tax Return (ITR)","31 Aug 2024","In 41 days"}
-        });
-        addReminderMonth("September 2024", new String[][]{
-            {"Zahid Hussain","Income Tax Return (ITR)","15 Sep 2024","Upcoming"}
-        });
+        Button add=actionButton("Schedule Reminder",R.drawable.ic_add,true);
+        add.setOnClickListener(v->reminderForm(0));
+        body.addView(add,new LinearLayout.LayoutParams(-1,dp(52)));
+
+        body.addView(section("Scheduled"));
+        List<DBHelper.Reminder> rs=db.reminders(0);
+        boolean any=false;
+        for(DBHelper.Reminder rr:rs){
+            if(!"Scheduled".equals(rr.status))continue;
+            any=true;
+            LinearLayout x=card(16);
+            LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);
+            TextView ic=iconCircle(R.drawable.ic_bell);ic.setBackground(solid(Color.rgb(255,243,225),14));row.addView(ic,new LinearLayout.LayoutParams(dp(42),dp(42)));
+            LinearLayout tx=new LinearLayout(this);tx.setOrientation(LinearLayout.VERTICAL);tx.setPadding(dp(10),0,0,0);
+            tx.addView(tv(rr.title,13,INK,true));
+            tx.addView(tv((rr.client==null||rr.client.trim().isEmpty()?"General":rr.client)+" • "+rr.repeat,10,MUTED,false));
+            tx.addView(tv(new SimpleDateFormat("dd MMM yyyy, hh:mm a",Locale.US).format(new Date(rr.at)),10,BLUE,true));
+            row.addView(tx,new LinearLayout.LayoutParams(0,-2,1));
+            TextView del=tv("Delete",10,RED,true);del.setGravity(Gravity.CENTER);del.setOnClickListener(v->{ReminderScheduler.cancel(this,rr.id);db.deleteReminder(rr.id);showReminders();});
+            row.addView(del,new LinearLayout.LayoutParams(dp(54),dp(36)));
+            x.addView(row);body.addView(x);
+        }
+        if(!any)body.addView(emptyState("No scheduled reminders","Create a client or general follow-up reminder."));
+
+        body.addView(section("Filing Workload"));
+        LinearLayout work=card(18);
+        work.addView(infoLineReport("Pending returns",String.valueOf(db.countPending()),ORANGE));
+        work.addView(infoLineReport("Filed returns",String.valueOf(db.countFiled()),GREEN));
+        work.addView(infoLineReport("Clients",String.valueOf(db.countClients()),BLUE));
+        work.setOnClickListener(v->showFilingsHub());body.addView(work);
     }
 
     private void addReminderMonth(String month,String[][] rows){
@@ -796,6 +831,23 @@ public class MainActivity extends Activity {
         TextView go=tv("›",24,MUTED,false);c.addView(go);c.setOnClickListener(v->r.run());return c;
     }
 
+    private void showClientNotes(long id){
+        DBHelper.Client cl=db.client(id);activeNav="clients";shell("Client Notes",cl==null?"Notes":cl.name);
+        if(cl==null)return;
+        LinearLayout note=card(18);note.addView(tv("Internal Notes",13,INK,true));note.addView(tv(safe(cl.notes),12,MUTED,false));body.addView(note);
+        Button edit=actionButton("Edit Client Notes",R.drawable.ic_edit,true);edit.setOnClickListener(v->clientForm(cl));body.addView(edit,new LinearLayout.LayoutParams(-1,dp(50)));
+    }
+
+    private void confirmDeleteClient(DBHelper.Client cl){
+        new AlertDialog.Builder(this).setTitle("Delete "+cl.name+"?")
+            .setMessage("Client, filings, reminders, payments and document records will be deleted from this device.")
+            .setNegativeButton("Cancel",null)
+            .setPositiveButton("Delete",(d,w)->{
+                for(DBHelper.Reminder r:db.reminders(cl.id))ReminderScheduler.cancel(this,r.id);
+                db.deleteClient(cl.id);toast("Client deleted");showClients("");
+            }).show();
+    }
+
     private View workspaceTile(String title,String sub,int icon,int color,Runnable run){
         LinearLayout x=new LinearLayout(this);x.setOrientation(LinearLayout.VERTICAL);x.setGravity(Gravity.CENTER);x.setBackground(solid(Color.WHITE,18));x.setElevation(dp(1));
         TextView ic=iconCircle(icon);ic.setBackground(solid(Color.rgb(238,245,255),14));x.addView(ic,new LinearLayout.LayoutParams(dp(42),dp(42)));
@@ -833,21 +885,33 @@ public class MainActivity extends Activity {
         Button add=actionButton("Schedule Reminder",R.drawable.ic_bell,true);add.setOnClickListener(v->reminderForm(id));body.addView(add,new LinearLayout.LayoutParams(-1,dp(52)));
         body.addView(spacer(8));List<DBHelper.Reminder> rs=db.reminders(id);
         if(rs.isEmpty())body.addView(emptyState("No reminders","Schedule a local + WhatsApp follow-up."));
-        for(DBHelper.Reminder rr:rs){LinearLayout x=card(16);x.addView(tv(rr.title,13,INK,true));x.addView(tv(rr.repeat+" • "+rr.channel,10,MUTED,false));x.addView(tv(new SimpleDateFormat("dd MMM yyyy, hh:mm a",Locale.US).format(new Date(rr.at)),10,BLUE,true));body.addView(x);}
+        for(DBHelper.Reminder rr:rs){
+            LinearLayout x=card(16);x.addView(tv(rr.title,13,INK,true));x.addView(tv(rr.repeat+" • "+rr.channel+" • "+rr.status,10,MUTED,false));x.addView(tv(new SimpleDateFormat("dd MMM yyyy, hh:mm a",Locale.US).format(new Date(rr.at)),10,BLUE,true));
+            Button del=actionButton("Delete Reminder",R.drawable.ic_more,false);del.setTextColor(RED);del.setOnClickListener(v->{ReminderScheduler.cancel(this,rr.id);db.deleteReminder(rr.id);showClientReminders(id);});x.addView(del,new LinearLayout.LayoutParams(-1,dp(40)));
+            body.addView(x);
+        }
     }
 
     private void showClientDocuments(long id){
         DBHelper.Client cl=db.client(id);activeNav="more";shell("Documents",cl==null?"Checklist":cl.name);
         Button add=actionButton("Add Document",R.drawable.ic_add,true);add.setOnClickListener(v->documentForm(id));body.addView(add,new LinearLayout.LayoutParams(-1,dp(52)));body.addView(spacer(8));
         List<DBHelper.Document> ds=db.documents(id);if(ds.isEmpty())body.addView(emptyState("No documents","Track required and received documents."));
-        for(DBHelper.Document d:ds){LinearLayout x=card(16);x.addView(tv(d.title,13,INK,true));x.addView(tv(d.category+" • "+d.status,10,MUTED,false));x.addView(tv(safe(d.notes),10,BLUE,false));body.addView(x);}
+        for(DBHelper.Document d:ds){
+            LinearLayout x=card(16);x.addView(tv(d.title,13,INK,true));x.addView(tv(d.category+" • "+d.status,10,MUTED,false));x.addView(tv(safe(d.notes),10,BLUE,false));
+            if(!"Received".equalsIgnoreCase(d.status)){Button received=actionButton("Mark Received",R.drawable.ic_doc,false);received.setOnClickListener(v->{db.setDocumentStatus(d.id,"Received");showClientDocuments(id);});x.addView(received,new LinearLayout.LayoutParams(-1,dp(40)));}
+            body.addView(x);
+        }
     }
 
     private void showClientPayments(long id){
         DBHelper.Client cl=db.client(id);activeNav="more";shell("Payments",cl==null?"Fee ledger":cl.name);
         Button add=actionButton("Add Payment",R.drawable.ic_add,true);add.setOnClickListener(v->paymentForm(id));body.addView(add,new LinearLayout.LayoutParams(-1,dp(52)));body.addView(spacer(8));
         List<DBHelper.Payment> ps=db.payments(id);if(ps.isEmpty())body.addView(emptyState("No payments","Track consultancy fees and dues."));
-        for(DBHelper.Payment p:ps){LinearLayout x=card(16);LinearLayout r=new LinearLayout(this);r.setGravity(Gravity.CENTER_VERTICAL);LinearLayout tx=new LinearLayout(this);tx.setOrientation(LinearLayout.VERTICAL);tx.addView(tv(p.title,13,INK,true));tx.addView(tv("Due "+safe(p.due)+" • "+p.status,10,MUTED,false));r.addView(tx,new LinearLayout.LayoutParams(0,-2,1));r.addView(tv("PKR "+String.format(Locale.US,"%.0f",p.amount),13,BLUE,true));x.addView(r);body.addView(x);}
+        for(DBHelper.Payment p:ps){
+            LinearLayout x=card(16);LinearLayout r=new LinearLayout(this);r.setGravity(Gravity.CENTER_VERTICAL);LinearLayout tx=new LinearLayout(this);tx.setOrientation(LinearLayout.VERTICAL);tx.addView(tv(p.title,13,INK,true));tx.addView(tv("Due "+safe(p.due)+" • "+p.status,10,MUTED,false));r.addView(tx,new LinearLayout.LayoutParams(0,-2,1));r.addView(tv("PKR "+String.format(Locale.US,"%.0f",p.amount),13,BLUE,true));x.addView(r);
+            if(!"Paid".equalsIgnoreCase(p.status)){Button paid=actionButton("Mark Paid",R.drawable.ic_payment,false);paid.setOnClickListener(v->{db.setPaymentStatus(p.id,"Paid");showClientPayments(id);});x.addView(paid,new LinearLayout.LayoutParams(-1,dp(40)));}
+            body.addView(x);
+        }
     }
 
     private void documentForm(long id){
@@ -915,12 +979,19 @@ public class MainActivity extends Activity {
         LinearLayout f=new LinearLayout(this);f.setOrientation(LinearLayout.VERTICAL);f.setPadding(dp(18),dp(8),dp(18),dp(8));
         EditText title=field(f,"Reminder title","FBR Return Reminder");
         EditText msg=field(f,"Message","Kindly apne required FBR return documents provide kar dein.");
-        EditText mins=field(f,"Remind after minutes","1");mins.setInputType(InputType.TYPE_CLASS_NUMBER);
-        new AlertDialog.Builder(this).setTitle("Add Reminder").setView(f).setNegativeButton("Cancel",null).setPositiveButton("Schedule",(d,w)->{
-            int m=1;try{m=Integer.parseInt(val(mins));}catch(Exception ignored){}
+        EditText mins=field(f,"Remind after minutes","10");mins.setInputType(InputType.TYPE_CLASS_NUMBER);
+        TextView repeatLabel=tv("Repeat",11,MUTED,true);repeatLabel.setPadding(0,dp(4),0,dp(5));f.addView(repeatLabel);
+        Spinner repeat=new Spinner(this);
+        ArrayAdapter<String> adapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Once","Monthly"});
+        repeat.setAdapter(adapter);repeat.setSelection(1);
+        f.addView(repeat,new LinearLayout.LayoutParams(-1,dp(50)));
+        new AlertDialog.Builder(this).setTitle("Schedule Reminder").setView(f).setNegativeButton("Cancel",null).setPositiveButton("Schedule",(d,w)->{
+            int m=10;try{m=Math.max(1,Integer.parseInt(val(mins)));}catch(Exception ignored){}
             long at=System.currentTimeMillis()+m*60000L;
-            long rid=db.addReminder(clientId,val(title),val(msg),at,"Monthly","Local + WhatsApp");
-            ReminderScheduler.schedule(this,rid,val(title),val(msg),at,"Monthly");
+            String rule=String.valueOf(repeat.getSelectedItem());
+            long rid=db.addReminder(clientId,val(title),val(msg),at,rule,"Local + WhatsApp");
+            ReminderScheduler.schedule(this,rid,val(title),val(msg),at,rule);
+            toast("Reminder scheduled");
             showReminders();
         }).show();
     }
