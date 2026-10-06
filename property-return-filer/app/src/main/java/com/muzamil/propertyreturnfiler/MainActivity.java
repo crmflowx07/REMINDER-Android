@@ -50,16 +50,21 @@ public class MainActivity extends Activity {
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 100);
         }
-        showSplash();
         final String requested=getIntent()==null?null:getIntent().getStringExtra("open");
-        // Never allow the app to remain stuck on welcome. Notifications can deep-link to reminders.
-        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-            if(dashboardOpened || isFinishing())return;
-            if("reminders".equals(requested)){
-                try{db.getWritableDatabase();dashboardOpened=true;showReminders();}
-                catch(Throwable e){Log.e("FBRReturnFiler","Reminder deep link failed",e);openDashboardSafe();}
-            }else openDashboardSafe();
-        }, 900);
+        // V13: no welcome/Get Started gate. Enter the app immediately.
+        if("reminders".equals(requested)){
+            try{
+                db.getWritableDatabase();
+                dashboardOpened=true;
+                showReminders();
+            }catch(Throwable e){
+                Log.e("FBRReturnFiler","Reminder deep link failed",e);
+                dashboardOpened=false;
+                openDashboardSafe();
+            }
+        }else{
+            openDashboardSafe();
+        }
     }
 
     @Override protected void onNewIntent(Intent intent){
