@@ -536,7 +536,11 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams srp=new LinearLayout.LayoutParams(-1,dp(48));srp.setMargins(0,dp(10),0,0);root.addView(searchRow,srp);
 
         LinearLayout tabs=new LinearLayout(this);tabs.setGravity(Gravity.CENTER_VERTICAL);
-        tabs.addView(chip("All (48)",true));tabs.addView(chip("Active (36)",false));tabs.addView(chip("Pending (12)",false));tabs.addView(chip("Filed (28)",false));
+        TextView allChip=chip("All ("+db.countClients()+")",true);
+        TextView activeChip=chip("Active ("+db.countActiveClients()+")",false);
+        TextView pendingChip=chip("Pending ("+db.countPendingClients()+")",false);
+        TextView filedChip=chip("Filed ("+db.countFiledClients()+")",false);
+        tabs.addView(allChip);tabs.addView(activeChip);tabs.addView(pendingChip);tabs.addView(filedChip);
         LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(-1,dp(40));tp.setMargins(0,dp(7),0,dp(4));root.addView(tabs,tp);
 
         FrameLayout contentFrame=new FrameLayout(this);
@@ -548,6 +552,10 @@ public class MainActivity extends Activity {
         setContentView(root);
 
         renderClients(list,q);
+        allChip.setOnClickListener(v->{setChipState(new TextView[]{allChip,activeChip,pendingChip,filedChip},0);renderClientCollection(list,db.clients(""));});
+        activeChip.setOnClickListener(v->{setChipState(new TextView[]{allChip,activeChip,pendingChip,filedChip},1);renderClientCollection(list,db.clientsByStatus("Active"));});
+        pendingChip.setOnClickListener(v->{setChipState(new TextView[]{allChip,activeChip,pendingChip,filedChip},2);renderClientCollection(list,db.clientsByStatus("Pending"));});
+        filedChip.setOnClickListener(v->{setChipState(new TextView[]{allChip,activeChip,pendingChip,filedChip},3);renderClientCollection(list,db.clientsByStatus("Filed"));});
         search.addTextChangedListener(new TextWatcher(){
             @Override public void beforeTextChanged(CharSequence s,int st,int count,int after){}
             @Override public void onTextChanged(CharSequence s,int st,int before,int count){renderClients(list,s==null?"":s.toString());}
@@ -564,13 +572,23 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(30),1);p.setMargins(dp(2),0,dp(2),0);t.setLayoutParams(p);return t;
     }
 
-    private void renderClients(LinearLayout list,String q){
-        list.removeAllViews();
-        List<DBHelper.Client> cs=db.clients(q);
-        if(cs.isEmpty()) {
-            TextView e=tv("No clients found. Tap + to add a client.",13,MUTED,false);e.setGravity(Gravity.CENTER);e.setPadding(0,dp(30),0,dp(30));list.addView(e);return;
+    private void setChipState(TextView[] chips,int selected){
+        for(int i=0;i<chips.length;i++){
+            boolean on=i==selected;
+            chips[i].setTextColor(on?Color.WHITE:Color.rgb(72,91,132));
+            chips[i].setTypeface(Typeface.create("sans",on?Typeface.BOLD:Typeface.NORMAL));
+            chips[i].setBackground(solid(on?BLUE:Color.rgb(239,244,251),16));
         }
-        for(DBHelper.Client c:cs) list.addView(clientRow(c));
+    }
+
+    private void renderClientCollection(LinearLayout list,List<DBHelper.Client> cs){
+        list.removeAllViews();
+        if(cs==null||cs.isEmpty()){TextView e=tv("No clients match this filter.",13,MUTED,false);e.setGravity(Gravity.CENTER);e.setPadding(0,dp(30),0,dp(30));list.addView(e);return;}
+        for(DBHelper.Client cl:cs)list.addView(clientRow(cl));
+    }
+
+    private void renderClients(LinearLayout list,String q){
+        renderClientCollection(list,db.clients(q));
     }
 
     private View clientRow(DBHelper.Client c){
