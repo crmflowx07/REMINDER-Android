@@ -45,6 +45,11 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 100);
         }
         showSplash();
+        // Never allow the app to remain stuck on the welcome screen.
+        // The welcome UI stays visible briefly, then enters the dashboard automatically.
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            if (!dashboardOpened && !isFinishing()) openDashboardSafe();
+        }, 900);
     }
 
     private int dp(int v){ return (int)(v * getResources().getDisplayMetrics().density); }
