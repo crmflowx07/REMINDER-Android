@@ -916,14 +916,14 @@ public class MainActivity extends Activity {
 
     private void documentForm(long id){
         LinearLayout f=new LinearLayout(this);f.setOrientation(LinearLayout.VERTICAL);f.setPadding(dp(18),dp(8),dp(18),dp(8));
-        EditText t=field(f,"Document title","Bank Statement");EditText cat=field(f,"Category","FBR Documents");EditText st=field(f,"Status","Required");EditText n=field(f,"Notes","");
-        new AlertDialog.Builder(this).setTitle("Add Document").setView(f).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{db.addDocument(id,val(t),val(cat),val(st),val(n));showClientDocuments(id);}).show();
+        EditText t=field(f,"Document title","Bank Statement");EditText cat=field(f,"Category","FBR Documents");Spinner st=dropdown(f,"Status",new String[]{"Required","Requested","Received","Verified"},"Required");EditText n=field(f,"Notes","");
+        new AlertDialog.Builder(this).setTitle("Add Document").setView(f).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{db.addDocument(id,val(t),val(cat),String.valueOf(st.getSelectedItem()),val(n));showClientDocuments(id);}).show();
     }
 
     private void paymentForm(long id){
         LinearLayout f=new LinearLayout(this);f.setOrientation(LinearLayout.VERTICAL);f.setPadding(dp(18),dp(8),dp(18),dp(8));
-        EditText t=field(f,"Payment title","Consultancy Fee");EditText a=field(f,"Amount","5000");a.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);EditText due=field(f,"Due date","10 Oct 2026");EditText st=field(f,"Status","Pending");
-        new AlertDialog.Builder(this).setTitle("Add Payment").setView(f).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{double amount=0;try{amount=Double.parseDouble(val(a));}catch(Exception ignored){}db.addPayment(id,val(t),amount,val(due),val(st),"");showClientPayments(id);}).show();
+        EditText t=field(f,"Payment title","Consultancy Fee");EditText a=field(f,"Amount","5000");a.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);EditText due=field(f,"Due date",new SimpleDateFormat("dd MMM yyyy",Locale.US).format(new Date(System.currentTimeMillis()+7L*86400000L)));Spinner st=dropdown(f,"Status",new String[]{"Pending","Paid","Partially Paid","Overdue"},"Pending");
+        new AlertDialog.Builder(this).setTitle("Add Payment").setView(f).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{double amount=0;try{amount=Double.parseDouble(val(a));}catch(Exception ignored){}db.addPayment(id,val(t),amount,val(due),String.valueOf(st.getSelectedItem()),"");showClientPayments(id);}).show();
     }
 
     private void showFilingsHub(){activeNav="more";shell("Filing Center","All clients and return workload");for(DBHelper.Client cl:db.clients("")){LinearLayout x=card(16);x.addView(tv(cl.name,13,INK,true));x.addView(tv(db.filings(cl.id).size()+" filing records • "+safe(cl.taxType),10,MUTED,false));x.setOnClickListener(v->showClientFilings(cl.id));body.addView(x);}}
@@ -956,16 +956,29 @@ public class MainActivity extends Activity {
         EditText ntn=field(f,"NTN Number",edit?c.ntn:"");
         EditText cnic=field(f,"CNIC Number",edit?c.cnic:"");
         EditText business=field(f,"Business / Profession",edit?c.business:"");
-        EditText type=field(f,"Filing Type",edit?c.taxType:"");
+        Spinner type=dropdown(f,"Filing Type",new String[]{"Income Tax Return (ITR)","Sales Tax Return (STR)","Income + Sales Tax","Salaried / Business"},edit?c.taxType:"Income Tax Return (ITR)");
+        Spinner status=dropdown(f,"Client Status",new String[]{"Active","Pending","Filed"},edit?c.status:"Active");
         EditText due=field(f,"Next Due Date",edit?c.nextDue:"");
         EditText email=field(f,"Email",edit?c.email:"");
         EditText address=field(f,"Address",edit?c.address:"");
         EditText notes=field(f,"Notes",edit?c.notes:"");
         new AlertDialog.Builder(this).setTitle(edit?"Edit Client":"Add New Client").setView(sv).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{
             if(val(name).isEmpty()){toast("Client name required");return;}
-            long id=db.saveClient(edit?c.id:0,val(name),val(wa),val(phone),val(cnic),val(ntn),val(business),val(type),"Active",val(due),val(email),val(address),val(notes));
+            long id=db.saveClient(edit?c.id:0,val(name),val(wa),val(phone),val(cnic),val(ntn),val(business),String.valueOf(type.getSelectedItem()),String.valueOf(status.getSelectedItem()),val(due),val(email),val(address),val(notes));
             showClient(id);
         }).show();
+    }
+
+    private Spinner dropdown(LinearLayout parent,String label,String[] items,String selected){
+        TextView l=tv(label,11,MUTED,true);l.setPadding(0,dp(4),0,dp(4));parent.addView(l);
+        Spinner s=new Spinner(this);
+        ArrayAdapter<String> a=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,items);
+        s.setAdapter(a);
+        int pick=0;
+        if(selected!=null)for(int i=0;i<items.length;i++)if(items[i].equalsIgnoreCase(selected)){pick=i;break;}
+        s.setSelection(pick);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(50));p.setMargins(0,0,0,dp(9));parent.addView(s,p);
+        return s;
     }
 
     private EditText field(LinearLayout parent,String hint,String value){
@@ -998,13 +1011,13 @@ public class MainActivity extends Activity {
 
     private void filingForm(long clientId){
         LinearLayout f=new LinearLayout(this);f.setOrientation(LinearLayout.VERTICAL);f.setPadding(dp(18),dp(8),dp(18),dp(8));
-        EditText month=field(f,"Month","September");
-        EditText year=field(f,"Year","2026");year.setInputType(InputType.TYPE_CLASS_NUMBER);
-        EditText type=field(f,"Filing Type","Income Tax Return");
-        EditText due=field(f,"Due Date","30 Sep 2026");
+        Spinner month=dropdown(f,"Month",new String[]{"January","February","March","April","May","June","July","August","September","October","November","December"},new SimpleDateFormat("MMMM",Locale.US).format(new Date()));
+        EditText year=field(f,"Year",new SimpleDateFormat("yyyy",Locale.US).format(new Date()));year.setInputType(InputType.TYPE_CLASS_NUMBER);
+        Spinner type=dropdown(f,"Filing Type",new String[]{"Income Tax Return (ITR)","Sales Tax Return (STR)","Annual Income Tax Return","Withholding Statement"},"Income Tax Return (ITR)");
+        EditText due=field(f,"Due Date",new SimpleDateFormat("dd MMM yyyy",Locale.US).format(new Date(System.currentTimeMillis()+7L*86400000L)));
         new AlertDialog.Builder(this).setTitle("Add Filing").setView(f).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{
-            int y=2026;try{y=Integer.parseInt(val(year));}catch(Exception ignored){}
-            db.addFiling(clientId,val(month),y,val(type),val(due),"Pending","");
+            int y=Calendar.getInstance().get(Calendar.YEAR);try{y=Integer.parseInt(val(year));}catch(Exception ignored){}
+            db.addFiling(clientId,String.valueOf(month.getSelectedItem()),y,String.valueOf(type.getSelectedItem()),val(due),"Pending","");
             showClient(clientId);
         }).show();
     }
